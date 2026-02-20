@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  app:
+    build:
+      context: ./lab01
+      dockerfile: Dockerfile
+
+    container_name: lab01
+
+    env_file:
+      - .env.local
+
+    ports:
+      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
+
+    restart: unless-stopped
