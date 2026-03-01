@@ -9,7 +9,8 @@ services:
     env_file:
       - .env.local
 
+    hostname: "${APP_HOST}"
     ports:
-      - "${APP_PORT:-8080}:${APP_PORT:-8080}"
+      - "${APP_PORT}:${APP_PORT}"
 
     restart: unless-stopped
