@@ -18,7 +18,7 @@ services:
 # Stops all running services.
 .PHONY: stop
 stop:
-	docker compose --env-file .env.local down
+	docker compose down
 
 # Cleans up all resources including volumes.
 .PHONY: clean
