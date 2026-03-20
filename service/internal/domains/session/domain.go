@@ -1,11 +1,11 @@
 package session
 
 type Domain struct {
-	Storage Storage
+	storage storage
 }
 
-func New(storage Storage) *Domain {
+func NewDomain(storage storage) *Domain {
 	return &Domain{
-		Storage: storage,
+		storage: storage,
 	}
 }

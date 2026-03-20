@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-func (d *Domain) UpdateSession(ctx context.Context, id Id, expiration time.Duration) error {
-	err := d.Storage.UpdateUserSession(ctx, id, expiration)
+func (d *Domain) UpdateSession(ctx context.Context, sid *Sid, ttl time.Duration) error {
+	err := d.storage.UpdateSession(ctx, sid, ttl)
 	if err != nil {
 		log.Printf("Error update session: %v", err)
 		return err

@@ -7,17 +7,17 @@ import (
 	"time"
 )
 
-func (d *Domain) CreateSession(ctx context.Context, expiration time.Duration) (Id, error) {
-	hexString, err := utils.GenerateHexString()
+func (d *Domain) CreateSession(ctx context.Context, ttl time.Duration) (*Sid, error) {
+	hexString, err := utils.HexString()
 	if err != nil {
 		log.Printf("Error generating session id: %v", err)
-		return Id{HexString: ""}, err
+		return nil, err
 	}
-	sessionId := Id{HexString: hexString}
-	err = d.Storage.CreateUserSession(ctx, sessionId, expiration)
+	sid := NewSid(hexString)
+	err = d.storage.CreateSession(ctx, sid, ttl)
 	if err != nil {
-		log.Printf("Error update session: %v", err)
-		return Id{HexString: ""}, err
+		log.Printf("Error create session: %v", err)
+		return nil, err
 	}
-	return sessionId, nil
+	return sid, nil
 }

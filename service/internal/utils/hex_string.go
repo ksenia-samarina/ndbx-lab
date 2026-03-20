@@ -5,8 +5,10 @@ import (
 	"encoding/hex"
 )
 
-func GenerateHexString() (string, error) {
-	bytes := make([]byte, 16)
+const hexStringSize = 16
+
+func HexString() (string, error) {
+	bytes := make([]byte, hexStringSize)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}

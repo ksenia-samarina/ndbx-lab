@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"os"
 	"samarina/ndbx/internal/domains/session"
-	"samarina/ndbx/internal/handlers/check_health"
-	"samarina/ndbx/internal/handlers/update_session"
-	"samarina/ndbx/internal/repository/redis"
+	"samarina/ndbx/internal/handlers/health"
+	session2 "samarina/ndbx/internal/handlers/session"
+	"samarina/ndbx/internal/repository/session/redis"
 	"strconv"
+	"time"
 
 	redisdb "github.com/redis/go-redis/v9"
 )
@@ -19,7 +20,13 @@ func main() {
 	appHost := os.Getenv("APP_HOST")
 	appPort := os.Getenv("APP_PORT")
 
-	redisHost := os.Getenv("REDIS_CONTAINER_NAME")
+	sec, err := strconv.Atoi(os.Getenv("APP_USER_SESSION_TTL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	ttl := time.Duration(sec) * time.Second
+
+	redisHost := os.Getenv("REDIS_HOST")
 	redisPort := os.Getenv("REDIS_PORT")
 	redisPassword := os.Getenv("REDIS_PASSWORD")
 	redisDB, err := strconv.Atoi(os.Getenv("REDIS_DB"))
@@ -43,11 +50,11 @@ func main() {
 	}(client)
 
 	storage := redis.NewSessionStorage(client)
-	domain := session.New(storage)
+	domain := session.NewDomain(storage)
 
 	// handlers
-	http.Handle("/health", check_health.New())
-	http.Handle("/session", update_session.New(domain))
+	http.Handle("/health", health.New(ttl))
+	http.Handle("/session", session2.New(domain, ttl))
 
 	log.Printf("Listening http at addr: %s:%s", appHost, appPort)
 	err = http.ListenAndServe(fmt.Sprintf("%s:%s", appHost, appPort), nil)
