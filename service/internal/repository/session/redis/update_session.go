@@ -17,7 +17,6 @@ func (s *SessionStorage) UpdateSession(ctx context.Context, sid *session.Sid, tt
 			ExpirationType: redis.HSetEXExpirationEX,
 			ExpirationVal:  int64(ttl.Seconds()),
 		},
-		"created_at", "",
 		"updated_at", t,
 	).Err()
 	if err != nil {
