@@ -1,15 +1,21 @@
 services:
   app:
     build:
-      context: ./lab01
+      context: service
       dockerfile: Dockerfile
-
-    container_name: lab01
-
+    container_name: service
     env_file:
       - .env.local
-
     ports:
       - "${APP_HOST}:${APP_PORT}:${APP_PORT}"
-
+    depends_on:
+      - redis_db
     restart: unless-stopped
+
+  redis_db:
+    image: redis:8.6.1-alpine
+    container_name: ${REDIS_HOST}
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    restart: unless-stopped
+#    command: redis-server --requirepass ${REDIS_PASSWORD}
