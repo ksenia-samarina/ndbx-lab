@@ -70,7 +70,7 @@ func main() {
 		}
 	}(redisClient)
 
-	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%s", mongoUser, mongoPassword, mongoHost, mongoPort)
+	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%s/?authSource=admin", mongoUser, mongoPassword, mongoHost, mongoPort)
 
 	clientOptions := options.Client().
 		ApplyURI(mongoURI).
