@@ -77,6 +77,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// 401
+		exists, _ := h.domain.GetSession(ctx, sid)
+		if !exists {
+			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusUnauthorized)
+			return
+		}
 		userID, err := h.domain.GetInternalUserID(ctx, sid)
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)

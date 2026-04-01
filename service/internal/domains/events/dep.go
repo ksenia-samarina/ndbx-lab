@@ -7,6 +7,7 @@ import (
 
 type sessionStorage interface {
 	GetInternalUserID(ctx context.Context, sid *types.Sid) (string, error)
+	GetSession(ctx context.Context, sid *types.Sid) (bool, error)
 }
 
 type eventsStorage interface {
