@@ -52,8 +52,8 @@ func main() {
 	mongoHost := os.Getenv("MONGODB_HOST")
 	mongoPort := os.Getenv("MONGODB_PORT")
 	mongoDB := os.Getenv("MONGODB_DATABASE")
-	mongoUser := os.Getenv("MONGODB_USER")
-	mongoPassword := os.Getenv("MONGODB_PASSWORD")
+	//mongoUser := os.Getenv("MONGODB_USER")
+	//mongoPassword := os.Getenv("MONGODB_PASSWORD")
 
 	redisClient := redisdb.NewClient(&redisdb.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
@@ -70,7 +70,7 @@ func main() {
 		}
 	}(redisClient)
 
-	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%s/?authSource=admin", mongoUser, mongoPassword, mongoHost, mongoPort)
+	mongoURI := fmt.Sprintf("mongodb://%s:%s", mongoHost, mongoPort)
 
 	clientOptions := options.Client().
 		ApplyURI(mongoURI).

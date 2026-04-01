@@ -29,9 +29,9 @@ services:
       - "${MONGODB_PORT}:${MONGODB_PORT}"
     env_file:
       - .env.local
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USER}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
+#    environment:
+#      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USER}
+#      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
     volumes:
       - mongo_data:/data/db
 
