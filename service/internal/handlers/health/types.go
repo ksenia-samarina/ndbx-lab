@@ -1,6 +1,6 @@
 package health
 
-type Health struct {
+type Resp struct {
 	Status StatusHealthCheck `json:"status"`
 }
 

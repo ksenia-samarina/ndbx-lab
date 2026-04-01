@@ -3,13 +3,13 @@ package redis
 import (
 	"context"
 	"fmt"
-	"samarina/ndbx/internal/domains/session"
+	"samarina/ndbx/internal/domains/types"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
-func (s *SessionStorage) CreateSession(ctx context.Context, sid *session.Sid, ttl time.Duration) error {
+func (s *Storage) UpdateSession(ctx context.Context, sid *types.Sid, ttl time.Duration) error {
 	t := time.Now().UTC().Format(time.RFC3339)
 
 	err := s.client.HSetEXWithArgs(ctx, sid.SidString,
@@ -17,7 +17,6 @@ func (s *SessionStorage) CreateSession(ctx context.Context, sid *session.Sid, tt
 			ExpirationType: redis.HSetEXExpirationEX,
 			ExpirationVal:  int64(ttl.Seconds()),
 		},
-		"created_at", t,
 		"updated_at", t,
 	).Err()
 	if err != nil {

@@ -34,11 +34,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 
-	healthCheck := &Health{
+	healthResp := &Resp{
 		Status: OkHealthCheck,
 	}
 
-	err = json.NewEncoder(w).Encode(healthCheck)
+	err = json.NewEncoder(w).Encode(healthResp)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("Error encoding response: %v", err)

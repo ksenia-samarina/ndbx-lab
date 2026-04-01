@@ -10,6 +10,7 @@ services:
       - "${APP_HOST}:${APP_PORT}:${APP_PORT}"
     depends_on:
       - redis_db
+      - mongodb
     restart: unless-stopped
 
   redis_db:
@@ -19,3 +20,20 @@ services:
       - "${REDIS_PORT}:${REDIS_PORT}"
     restart: unless-stopped
 #    command: redis-server --requirepass ${REDIS_PASSWORD}
+
+  mongodb:
+    image: mongo:7.0
+    container_name: ${MONGODB_HOST}
+    restart: unless-stopped
+    ports:
+      - "${MONGODB_PORT}:${MONGODB_PORT}"
+    env_file:
+      - .env.local
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

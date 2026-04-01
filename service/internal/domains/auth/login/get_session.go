@@ -1,4 +1,4 @@
-package session
+package login
 
 import (
 	"context"
@@ -6,5 +6,5 @@ import (
 )
 
 func (d *Domain) GetSession(ctx context.Context, sid *types.Sid) (bool, error) {
-	return d.storage.GetSession(ctx, sid)
+	return d.sessionStorage.GetSession(ctx, sid)
 }

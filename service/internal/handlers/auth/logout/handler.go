@@ -1,4 +1,4 @@
-package session
+package logout
 
 import (
 	"log"
@@ -24,27 +24,21 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	cookie, err := r.Cookie("X-Session-Id")
-	if err == nil {
-		sid := types.NewSid(cookie.Value)
-		exists, _ := h.domain.GetSession(ctx, sid)
-		if exists {
-			err := h.domain.UpdateSession(ctx, sid, h.ttl)
-			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				log.Printf("Error update session: %v", err)
-				return
-			}
-			h.writeSessionResponse(w, cookie.Value, h.ttl, http.StatusOK)
-			return
-		}
-	}
-	newSession, err := h.domain.CreateSession(ctx, h.ttl)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Error create session: %v", err)
+		log.Printf("Invalid cookie: %v", err)
 		return
 	}
-	h.writeSessionResponse(w, newSession.HexString, h.ttl, http.StatusCreated)
+	sid := types.NewSid(cookie.Value)
+
+	err = h.domain.DeleteSession(ctx, sid)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		log.Printf("Error delete session: %v", err)
+		return
+	}
+	h.writeSessionResponse(w, cookie.Value, 0, http.StatusNoContent)
+	return
 }
 
 func (h *Handler) writeSessionResponse(w http.ResponseWriter, sid string, ttl time.Duration, status int) {
