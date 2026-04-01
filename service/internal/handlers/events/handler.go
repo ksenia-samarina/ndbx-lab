@@ -1,7 +1,6 @@
 package events
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -25,7 +24,6 @@ func New(domain domain, ttl time.Duration) *Handler {
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	w.Header().Set("Content-Type", "application/json")
 
 	cookie, err := r.Cookie("X-Session-Id")
 	if err != nil {
@@ -91,7 +89,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// 409
-		createdBy := hex.EncodeToString([]byte(userID))
+		createdBy := userID
 		eventDB, err := h.domain.GetEvent(ctx, createdBy)
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -125,14 +123,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
 
 		title := query.Get("title")
-		if title == "" {
-			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			eventRespMsg := &Resp{
-				Message: StatusEventCreation(fmt.Sprintf(string(invalidParameterName), "title")),
-			}
-			err = json.NewEncoder(w).Encode(eventRespMsg)
-			return
-		}
 
 		limitStr := query.Get("limit")
 		limit := int64(-1)
@@ -189,5 +179,8 @@ func (h *Handler) writeSessionResponse(w http.ResponseWriter, sid string, ttl ti
 		HttpOnly: true,
 		MaxAge:   int(ttl.Seconds()),
 	})
+	if status != http.StatusUnauthorized {
+		w.Header().Set("Content-Type", "application/json")
+	}
 	w.WriteHeader(status)
 }
