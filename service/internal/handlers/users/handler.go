@@ -25,16 +25,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	w.Header().Set("Content-Type", "application/json")
 
-	cookie, err := r.Cookie("X-Session-Id")
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Invalid cookie: %v", err)
-		return
+	cookie, _ := r.Cookie("X-Session-Id")
+	sid := types.NewSid("")
+	if cookie != nil {
+		sid = types.NewSid(cookie.Value)
 	}
-	sid := types.NewSid(cookie.Value)
 
 	var user types.User
-	err = json.NewDecoder(r.Body).Decode(&user)
+	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("Invalid JSON: %v", err)
