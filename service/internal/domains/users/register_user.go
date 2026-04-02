@@ -28,7 +28,12 @@ func (d *Domain) RegisterUser(ctx context.Context, user *types.User, ttl time.Du
 	}
 	// Создаем сессию для нового пользователя
 	sid := types.NewSid(hexString)
-	err = d.sessionStorage.CreateUserSession(ctx, user.Username, sid, ttl)
+	userID, err := d.userStorage.GetInternalUserID(ctx, user.Username)
+	if err != nil {
+		log.Printf("Error get internal user id: %v", err)
+		return nil, err
+	}
+	err = d.sessionStorage.CreateUserSession(ctx, userID.String(), sid, ttl)
 	if err != nil {
 		log.Printf("Error create user session: %v", err)
 		return nil, err
