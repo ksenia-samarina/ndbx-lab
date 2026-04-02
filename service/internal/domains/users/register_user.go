@@ -33,7 +33,7 @@ func (d *Domain) RegisterUser(ctx context.Context, user *types.User, ttl time.Du
 		log.Printf("Error get internal user id: %v", err)
 		return nil, err
 	}
-	err = d.sessionStorage.CreateUserSession(ctx, userID.String(), sid, ttl)
+	err = d.sessionStorage.CreateUserSession(ctx, userID.Hex(), sid, ttl)
 	if err != nil {
 		log.Printf("Error create user session: %v", err)
 		return nil, err
