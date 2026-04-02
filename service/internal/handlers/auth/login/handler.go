@@ -2,12 +2,15 @@ package login
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"samarina/ndbx/internal/domains/types"
 	"samarina/ndbx/internal/utils"
 	"time"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Handler struct {
@@ -27,12 +30,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	cookie, err := r.Cookie("X-Session-Id")
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Invalid cookie: %v", err)
-		return
+	sid := types.NewSid("")
+	if cookie != nil {
+		sid = types.NewSid(cookie.Value)
 	}
-	sid := types.NewSid(cookie.Value)
 
 	var login types.Login
 	err = json.NewDecoder(r.Body).Decode(&login)
@@ -62,7 +63,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// 401
 	user, err := h.domain.GetByUsername(ctx, login.Username)
-	if err != nil {
+	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("Error get user by username: %v", err)
 		return
