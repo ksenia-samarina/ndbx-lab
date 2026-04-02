@@ -1,6 +1,7 @@
 package logout
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"samarina/ndbx/internal/domains/types"
@@ -24,6 +25,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	cookie, err := r.Cookie("X-Session-Id")
+	if errors.Is(err, http.ErrNoCookie) {
+		w.WriteHeader(http.StatusUnauthorized)
+		log.Printf("No cookie: %v", err)
+		return
+	}
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("Invalid cookie: %v", err)
