@@ -3,11 +3,13 @@ package events
 import (
 	"context"
 	"samarina/ndbx/internal/domains/types"
+	"time"
 )
 
 type sessionStorage interface {
 	GetInternalUserID(ctx context.Context, sid *types.Sid) (string, error)
 	GetSession(ctx context.Context, sid *types.Sid) (bool, error)
+	UpdateSession(ctx context.Context, sid *types.Sid, ttl time.Duration) error
 }
 
 type eventsStorage interface {

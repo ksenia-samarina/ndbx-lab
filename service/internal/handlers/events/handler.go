@@ -132,6 +132,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Invalid create event DB: %v", err)
 			return
 		}
+		err = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			log.Printf("Error updating user session: %v", err)
+			return
+		}
 		h.writeSessionResponse(w, cookie.Value, h.ttl, http.StatusCreated)
 		eventCreationMsg := &EventID{
 			ID: eventID,
