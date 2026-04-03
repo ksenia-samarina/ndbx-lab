@@ -37,9 +37,6 @@ func (s *Storage) ListEvents(ctx context.Context, title string, offset int64, li
 	if err := cursor.All(ctx, &events); err != nil {
 		return nil, err
 	}
-	for i := range events {
-		events[i].Address = events[i].Location.Address
-	}
 
 	return events, nil
 }

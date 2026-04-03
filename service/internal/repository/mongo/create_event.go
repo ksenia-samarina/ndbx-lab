@@ -9,13 +9,8 @@ import (
 )
 
 func (s *Storage) CreateEvent(ctx context.Context, createdBy string, event *types.Event) (string, error) {
-	objectID, err := primitive.ObjectIDFromHex(createdBy)
-	if err != nil {
-		return "", err
-	}
-	event.CreatedBy = objectID
-	event.Location.Address = event.Address
-	event.CreatedAt = time.Now()
+	event.CreatedBy = createdBy
+	event.CreatedAt = time.Now().Format(time.RFC3339)
 	res, err := s.collection.InsertOne(ctx, &event)
 	if err != nil {
 		return "", err

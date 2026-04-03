@@ -1,8 +1,6 @@
 package types
 
 import (
-	"time"
-
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -44,12 +42,12 @@ type Event struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Title       string             `bson:"title" json:"title"`
 	Description string             `bson:"description" json:"description"`
-	Address     string             `bson:"-" json:"address"`
+	Address     string             `bson:"-" json:"address,omitempty"`
 	Location    struct {
 		Address string `bson:"address" json:"address"`
-	} `bson:"location" json:"-"`
-	CreatedAt  time.Time          `bson:"created_at" json:"created_at"`
-	CreatedBy  primitive.ObjectID `bson:"created_by" json:"created_by"`
-	StartedAt  time.Time          `bson:"started_at" json:"started_at"`
-	FinishedAt time.Time          `bson:"finished_at" json:"finished_at"`
+	} `bson:"location" json:"location"`
+	CreatedAt  string `bson:"created_at" json:"created_at"`
+	CreatedBy  string `bson:"created_by" json:"created_by"`
+	StartedAt  string `bson:"started_at" json:"started_at"`
+	FinishedAt string `bson:"finished_at" json:"finished_at"`
 }

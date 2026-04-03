@@ -50,6 +50,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if event.Address != "" && event.Location.Address == "" {
+			event.Location.Address = event.Address
+		}
+		if event.Location.Address != "" && event.Address == "" {
+			event.Address = event.Location.Address
+		}
+
 		// 400
 		if event.Title == "" {
 			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
@@ -59,7 +66,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			err = json.NewEncoder(w).Encode(eventRespMsg)
 			return
 		}
-		if event.Address == "" {
+		if event.Location.Address == "" {
 			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
 			eventRespMsg := &Resp{
 				Message: StatusEventCreation(fmt.Sprintf(string(invalidFieldName), "address")),
@@ -67,7 +74,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			err = json.NewEncoder(w).Encode(eventRespMsg)
 			return
 		}
-		if event.StartedAt.String() == "" {
+		if event.StartedAt == "" {
 			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
 			eventRespMsg := &Resp{
 				Message: StatusEventCreation(fmt.Sprintf(string(invalidFieldName), "started_at")),
@@ -75,7 +82,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			err = json.NewEncoder(w).Encode(eventRespMsg)
 			return
 		}
-		if event.FinishedAt.String() == "" {
+		if event.FinishedAt == "" {
 			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
 			eventRespMsg := &Resp{
 				Message: StatusEventCreation(fmt.Sprintf(string(invalidFieldName), "finished_at")),
