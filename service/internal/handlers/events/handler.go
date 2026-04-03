@@ -9,6 +9,8 @@ import (
 	"samarina/ndbx/internal/domains/types"
 	"strconv"
 	"time"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Handler struct {
@@ -102,12 +104,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// 409
 		createdBy := userID
 		eventDB, err := h.domain.GetEvent(ctx, createdBy)
-		if err != nil {
+		if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			log.Printf("Invalid event DB: %v", err)
 			return
 		}
-		if eventDB.Title == event.Title {
+		if eventDB != nil && eventDB.Title == event.Title {
 			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
 			eventRespMsg := &Resp{
 				Message: eventAlreadyExists,
