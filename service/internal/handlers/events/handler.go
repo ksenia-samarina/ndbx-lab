@@ -167,7 +167,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			offset = off
 		}
 
-		events, err := h.domain.ListEvents(ctx, title, limit, offset)
+		events, err := h.domain.ListEvents(ctx, title, offset, limit)
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			log.Printf("Error listing events: %v", err)
