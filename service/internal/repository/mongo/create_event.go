@@ -3,6 +3,7 @@ package mongo
 import (
 	"context"
 	"samarina/ndbx/internal/domains/types"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -13,6 +14,8 @@ func (s *Storage) CreateEvent(ctx context.Context, createdBy string, event *type
 		return "", err
 	}
 	event.CreatedBy = objectID
+	event.Location.Address = event.Address
+	event.CreatedAt = time.Now()
 	res, err := s.collection.InsertOne(ctx, &event)
 	if err != nil {
 		return "", err

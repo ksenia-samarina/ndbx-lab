@@ -44,10 +44,10 @@ type Event struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Title       string             `bson:"title" json:"title"`
 	Description string             `bson:"description" json:"description"`
-	Address     string             `bson:"-" json:"address,omitempty"`
+	Address     string             `bson:"-" json:"address"`
 	Location    struct {
 		Address string `bson:"address" json:"address"`
-	} `bson:"location" json:"location"`
+	} `bson:"location" json:"-"`
 	CreatedAt  time.Time          `bson:"created_at" json:"created_at"`
 	CreatedBy  primitive.ObjectID `bson:"created_by" json:"created_by"`
 	StartedAt  time.Time          `bson:"started_at" json:"started_at"`
