@@ -125,7 +125,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Invalid create event DB: %v", err)
 			return
 		}
-		h.writeSessionResponse(w, cookie.Value, 0, http.StatusCreated)
+		h.writeSessionResponse(w, cookie.Value, h.ttl, http.StatusCreated)
 		eventCreationMsg := &EventID{
 			ID: eventID,
 		}
@@ -178,7 +178,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			"events": events,
 			"count":  len(events),
 		}
-		h.writeSessionResponse(w, cookie.Value, 0, http.StatusOK)
+		h.writeSessionResponse(w, cookie.Value, h.ttl, http.StatusOK)
 		err = json.NewEncoder(w).Encode(resp)
 		return
 	}
