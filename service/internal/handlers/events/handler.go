@@ -42,6 +42,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if event.Address != "" && event.Location.Address == "" {
+			event.Location.Address = event.Address
+		}
+		if event.Location.Address != "" && event.Address == "" {
+			event.Address = event.Location.Address
+		}
+
 		// 400
 		if event.Title == "" {
 			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
