@@ -26,9 +26,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	cookie, _ := r.Cookie("X-Session-Id")
-	sid := types.NewSid("")
+	var sid *types.Sid
 	if cookie != nil {
 		sid = types.NewSid(cookie.Value)
+	} else {
+		sid = types.NewSid("")
 	}
 
 	var user types.User

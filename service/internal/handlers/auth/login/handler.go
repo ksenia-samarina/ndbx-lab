@@ -2,15 +2,12 @@ package login
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"samarina/ndbx/internal/domains/types"
 	"samarina/ndbx/internal/utils"
 	"time"
-
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Handler struct {
@@ -30,10 +27,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	cookie, err := r.Cookie("X-Session-Id")
-	sid := types.NewSid("")
+	var cookieValue string
 	if cookie != nil {
-		sid = types.NewSid(cookie.Value)
+		cookieValue = cookie.Value
+	} else {
+		cookieValue = ""
 	}
+	sid := types.NewSid(cookieValue)
 
 	var login types.Login
 	err = json.NewDecoder(r.Body).Decode(&login)
@@ -63,11 +63,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// 401
 	user, err := h.domain.GetByUsername(ctx, login.Username)
-	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Error get user by username: %v", err)
-		return
-	}
 	if user == nil {
 		h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusUnauthorized)
 		loginResp := &Resp{
@@ -99,7 +94,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error update session: %v", err)
 			return
 		}
-		h.writeSessionResponse(w, cookie.Value, h.ttl, http.StatusNoContent)
+		h.writeSessionResponse(w, cookieValue, h.ttl, http.StatusNoContent)
 		return
 	}
 	_, err = h.domain.CreateUserSession(ctx, userID, h.ttl)
@@ -108,7 +103,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error create session: %v", err)
 		return
 	}
-	h.writeSessionResponse(w, cookie.Value, h.ttl, http.StatusNoContent)
+	h.writeSessionResponse(w, cookieValue, h.ttl, http.StatusNoContent)
 	return
 }
 

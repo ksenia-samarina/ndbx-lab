@@ -2,15 +2,12 @@ package events
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"samarina/ndbx/internal/domains/types"
 	"strconv"
 	"time"
-
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Handler struct {
@@ -29,14 +26,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	cookie, err := r.Cookie("X-Session-Id")
-	if errors.Is(err, http.ErrNoCookie) {
+	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		log.Printf("No cookie: %v", err)
-		return
-	}
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Invalid cookie: %v", err)
 		return
 	}
 	sid := types.NewSid(cookie.Value)
@@ -48,13 +40,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			log.Printf("Invalid JSON: %v", err)
 			return
-		}
-
-		if event.Address != "" && event.Location.Address == "" {
-			event.Location.Address = event.Address
-		}
-		if event.Location.Address != "" && event.Address == "" {
-			event.Address = event.Location.Address
 		}
 
 		// 400
@@ -111,11 +96,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// 409
 		createdBy := userID
 		eventDB, err := h.domain.GetEvent(ctx, createdBy)
-		if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Invalid event DB: %v", err)
-			return
-		}
 		if eventDB != nil && eventDB.Title == event.Title {
 			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
 			eventRespMsg := &Resp{
