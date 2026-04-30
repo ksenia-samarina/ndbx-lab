@@ -63,7 +63,7 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 		}
 
 		category := query.Get("category")
-		validCategories := map[string]bool{"meetup": true, "concert": true, "exhibition": true, "party": true, "other": true}
+		validCategories := map[string]bool{"": true, "meetup": true, "concert": true, "exhibition": true, "party": true, "other": true}
 		if !validCategories[category] {
 			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
