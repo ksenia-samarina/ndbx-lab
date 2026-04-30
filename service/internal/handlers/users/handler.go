@@ -87,7 +87,7 @@ func (h *Handler) RegisterOrGetUsers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_, err := h.domain.GetUserByUsername(ctx, user.Username)
-		if err != nil { // TODO: кастомная ошибка что нет пользака
+		if err == nil { // TODO: кастомная ошибка что нет пользака
 			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
 			utils.EncodeErrorResponse(w, ErrUserAlreadyExists)
