@@ -1,4 +1,4 @@
-package mongo
+package events
 
 import (
 	"context"
@@ -18,6 +18,5 @@ func (s *Storage) GetInternalUserID(ctx context.Context, username string) (primi
 	if err != nil {
 		return primitive.NilObjectID, err
 	}
-
 	return result.ID, nil
 }

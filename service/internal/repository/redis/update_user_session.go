@@ -3,13 +3,13 @@ package redis
 import (
 	"context"
 	"fmt"
-	"samarina/ndbx/internal/domains/types"
+	"samarina/ndbx/internal/model"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
-func (s *Storage) UpdateUserSession(ctx context.Context, userID string, sid *types.Sid, ttl time.Duration) error {
+func (s *Storage) UpdateUserSession(ctx context.Context, userID string, sid model.Sid, ttl time.Duration) error {
 	t := time.Now().UTC().Format(time.RFC3339)
 
 	err := s.client.HSetEXWithArgs(ctx, sid.SidString,

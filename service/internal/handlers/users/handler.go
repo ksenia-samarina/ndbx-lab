@@ -2,10 +2,10 @@ package users
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
-	"samarina/ndbx/internal/domains/types"
+	"samarina/ndbx/internal/handlers/utils"
+	"samarina/ndbx/internal/model"
+	"strconv"
 	"time"
 )
 
@@ -21,103 +21,117 @@ func New(domain domain, ttl time.Duration) *Handler {
 	}
 }
 
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RegisterOrGetUsers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	w.Header().Set("Content-Type", "application/json")
 
 	cookie, _ := r.Cookie("X-Session-Id")
-	var sid *types.Sid
-	if cookie != nil {
-		sid = types.NewSid(cookie.Value)
-	} else {
-		sid = types.NewSid("")
-	}
+	sid := model.NewSid(cookie.Value)
 
-	var user types.User
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Invalid JSON: %v", err)
-		return
-	}
+	switch r.Method {
+	case http.MethodGet: // Возвращает список организаторов, отвечающий параметрам поиска
+		query := r.URL.Query()
+		limit, err := strconv.ParseInt(query.Get("limit"), 10, 64)
+		if query.Get("limit") != "" && (err != nil || limit < 0) {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "limit"})
+			return
+		}
+		if query.Get("limit") == "" {
+			limit = 10
+		}
 
-	// 400
-	if user.Username == "" {
-		err := h.domain.UpdateUserSession(ctx, sid, h.ttl)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Error updating user session: %v", err)
+		offset, err := strconv.ParseInt(query.Get("offset"), 10, 64)
+		if query.Get("offset") != "" && (err != nil || offset < 0) {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "offset"})
 			return
 		}
-		h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-		userRegistrationResp := &Resp{
-			Message: StatusUserRegistration(fmt.Sprintf(string(invalidFieldName), "username")),
-		}
-		err = json.NewEncoder(w).Encode(userRegistrationResp)
-		return
-	}
-	if user.FullName == "" {
-		err := h.domain.UpdateUserSession(ctx, sid, h.ttl)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Error updating user session: %v", err)
-			return
-		}
-		h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-		userRegistrationResp := &Resp{
-			Message: StatusUserRegistration(fmt.Sprintf(string(invalidFieldName), "full_name")),
-		}
-		err = json.NewEncoder(w).Encode(userRegistrationResp)
-		return
-	}
-	if user.Password == "" {
-		err := h.domain.UpdateUserSession(ctx, sid, h.ttl)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Error updating user session: %v", err)
-			return
-		}
-		h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-		userRegistrationResp := &Resp{
-			Message: StatusUserRegistration(fmt.Sprintf(string(invalidFieldName), "password")),
-		}
-		err = json.NewEncoder(w).Encode(userRegistrationResp)
-		return
-	}
 
-	existingUser, err := h.domain.GetByUsername(ctx, user.Username)
-	// 409
-	if err == nil && existingUser != nil {
-		err = h.domain.UpdateUserSession(ctx, sid, h.ttl)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Error update session: %v", err)
+		name := query.Get("name")
+		id := query.Get("id")
+
+		users, _ := h.domain.GetUsers(ctx, id, name, uint64(limit), uint64(offset))
+
+		resp := map[string]interface{}{
+			"users": users,
+			"count": len(users),
+		}
+
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	case http.MethodPost: // Регистрирует нового пользователя
+		var user model.User
+		_ = json.NewDecoder(r.Body).Decode(&user)
+
+		if user.Username == "" {
+			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "username"})
 			return
 		}
-		h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
-		userRegistrationResp := &Resp{
-			Message: userAlreadyExists,
+		if user.FullName == "" {
+			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "full_name"})
+			return
 		}
-		err = json.NewEncoder(w).Encode(userRegistrationResp)
-		return
+		if user.Password == "" {
+			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "password"})
+			return
+		}
+
+		_, err := h.domain.GetUserByUsername(ctx, user.Username)
+		if err != nil { // TODO: кастомная ошибка что нет пользака
+			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
+			utils.EncodeErrorResponse(w, ErrUserAlreadyExists)
+			return
+		}
+
+		newSid, _ := h.domain.RegisterUser(ctx, user, h.ttl)
+		utils.WriteSessionResponse(w, newSid.HexString, h.ttl, http.StatusCreated)
 	}
-	// 201
-	newSession, err := h.domain.RegisterUser(ctx, &user, h.ttl)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Error create session: %v", err)
-		return
-	}
-	h.writeSessionResponse(w, newSession.HexString, h.ttl, http.StatusCreated)
 }
 
-func (h *Handler) writeSessionResponse(w http.ResponseWriter, sid string, ttl time.Duration, status int) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "X-Session-Id",
-		Value:    sid,
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   int(ttl.Seconds()),
-	})
-	w.WriteHeader(status)
+func (h *Handler) GetUserByID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	cookie, _ := r.Cookie("X-Session-Id")
+	sid := model.NewSid(cookie.Value)
+
+	id := r.PathValue("id")
+	user, err := h.domain.GetUserByUserID(ctx, id)
+	if err != nil { // TODO: кастомная ошибка что нет пользака
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
+		utils.EncodeErrorResponse(w, ErrUserNotFound)
+		return
+	}
+	utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
+	_ = json.NewEncoder(w).Encode(user)
+}
+
+func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	cookie, _ := r.Cookie("X-Session-Id")
+	sid := model.NewSid(cookie.Value)
+
+	id := r.PathValue("id")
+	_, err := h.domain.GetUserByUserID(ctx, id)
+	if err != nil { // TODO: кастомная ошибка что нет пользака
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
+		utils.EncodeErrorResponse(w, ErrUserNotFound)
+		return
+	}
+
+	events, _ := h.domain.GetUserEventsByUserID(ctx, id)
+
+	resp := map[string]interface{}{
+		"events": events,
+		"count":  len(events),
+	}
+	utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
+	_ = json.NewEncoder(w).Encode(&resp)
 }

@@ -3,10 +3,10 @@ package redis
 import (
 	"context"
 	"fmt"
-	"samarina/ndbx/internal/domains/types"
+	"samarina/ndbx/internal/model"
 )
 
-func (s *Storage) GetSession(ctx context.Context, sid *types.Sid) (bool, error) {
+func (s *Storage) GetSession(ctx context.Context, sid model.Sid) (bool, error) {
 	n, err := s.client.Exists(ctx, sid.SidString).Result()
 	if err != nil {
 		return false, fmt.Errorf("error check session existence: %w", err)

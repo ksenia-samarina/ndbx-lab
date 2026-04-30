@@ -5,9 +5,9 @@ type Domain struct {
 	eventsStorage  eventsStorage
 }
 
-func NewDomain(sessionStorage sessionStorage, loginStorage eventsStorage) *Domain {
+func NewDomain(sessionStorage sessionStorage, eventsStorage eventsStorage) *Domain {
 	return &Domain{
 		sessionStorage: sessionStorage,
-		eventsStorage:  loginStorage,
+		eventsStorage:  eventsStorage,
 	}
 }

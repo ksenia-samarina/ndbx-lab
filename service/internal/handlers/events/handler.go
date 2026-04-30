@@ -3,12 +3,14 @@ package events
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
-	"samarina/ndbx/internal/domains/types"
+	"samarina/ndbx/internal/handlers/utils"
+	"samarina/ndbx/internal/model"
 	"strconv"
 	"time"
 )
+
+const DateLayout = "20060102"
 
 type Handler struct {
 	domain domain
@@ -22,131 +24,23 @@ func New(domain domain, ttl time.Duration) *Handler {
 	}
 }
 
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	cookie, err := r.Cookie("X-Session-Id")
-	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
-		log.Printf("No cookie: %v", err)
-		return
-	}
-	sid := types.NewSid(cookie.Value)
+	cookie, _ := r.Cookie("X-Session-Id")
+	sid := model.NewSid(cookie.Value)
 
-	if r.Method == http.MethodPost {
-		var event types.Event
-		err = json.NewDecoder(r.Body).Decode(&event)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Invalid JSON: %v", err)
-			return
-		}
-
-		if event.Address != "" && event.Location.Address == "" {
-			event.Location.Address = event.Address
-		}
-		if event.Location.Address != "" && event.Address == "" {
-			event.Address = event.Location.Address
-		}
-
-		// 400
-		if event.Title == "" {
-			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			eventRespMsg := &Resp{
-				Message: StatusEventCreation(fmt.Sprintf(string(invalidFieldName), "title")),
-			}
-			err = json.NewEncoder(w).Encode(eventRespMsg)
-			return
-		}
-		if event.Location.Address == "" {
-			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			eventRespMsg := &Resp{
-				Message: StatusEventCreation(fmt.Sprintf(string(invalidFieldName), "address")),
-			}
-			err = json.NewEncoder(w).Encode(eventRespMsg)
-			return
-		}
-		if event.StartedAt == "" {
-			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			eventRespMsg := &Resp{
-				Message: StatusEventCreation(fmt.Sprintf(string(invalidFieldName), "started_at")),
-			}
-			err = json.NewEncoder(w).Encode(eventRespMsg)
-			return
-		}
-		if event.FinishedAt == "" {
-			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			eventRespMsg := &Resp{
-				Message: StatusEventCreation(fmt.Sprintf(string(invalidFieldName), "finished_at")),
-			}
-			err = json.NewEncoder(w).Encode(eventRespMsg)
-			return
-		}
-
-		// 401
-		exists, _ := h.domain.GetSession(ctx, sid)
-		if !exists {
-			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusUnauthorized)
-			return
-		}
-		userID, err := h.domain.GetInternalUserID(ctx, sid)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Invalid user ID: %v", err)
-			return
-		}
-		if userID == "" {
-			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusUnauthorized)
-			return
-		}
-
-		// 409
-		createdBy := userID
-		eventDB, err := h.domain.GetEvent(ctx, createdBy)
-		if eventDB != nil && eventDB.Title == event.Title {
-			h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
-			eventRespMsg := &Resp{
-				Message: eventAlreadyExists,
-			}
-			err = json.NewEncoder(w).Encode(eventRespMsg)
-			return
-		}
-
-		// 201
-		eventID, err := h.domain.CreateEvent(ctx, createdBy, &event)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Invalid create event DB: %v", err)
-			return
-		}
-		err = h.domain.UpdateUserSession(ctx, sid, h.ttl)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Error updating user session: %v", err)
-			return
-		}
-		h.writeSessionResponse(w, cookie.Value, h.ttl, http.StatusCreated)
-		eventCreationMsg := &EventID{
-			ID: eventID,
-		}
-		err = json.NewEncoder(w).Encode(eventCreationMsg)
-		return
-	}
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		query := r.URL.Query()
-
-		title := query.Get("title")
 
 		limitStr := query.Get("limit")
 		limit := int64(-1)
 		if limitStr != "" {
 			l, err := strconv.ParseInt(limitStr, 10, 64)
 			if err != nil || l < 0 {
-				h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-				eventRespMsg := &Resp{
-					Message: StatusEventCreation(fmt.Sprintf(string(invalidParameterName), "limit")),
-				}
-				err = json.NewEncoder(w).Encode(eventRespMsg)
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+				utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "limit"})
 				return
 			}
 			limit = l
@@ -157,43 +51,185 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if offsetStr != "" {
 			off, err := strconv.ParseInt(offsetStr, 10, 64)
 			if err != nil || off < 0 {
-				h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-				eventRespMsg := &Resp{
-					Message: StatusEventCreation(fmt.Sprintf(string(invalidParameterName), "offset")),
-				}
-				err = json.NewEncoder(w).Encode(eventRespMsg)
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+				utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "offset"})
 				return
 			}
 			offset = off
 		}
 
-		events, err := h.domain.ListEvents(ctx, title, offset, limit)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Error listing events: %v", err)
+		category := query.Get("category")
+		validCategories := map[string]bool{"meetup": true, "concert": true, "exhibition": true, "party": true, "other": true}
+		if !validCategories[category] {
+			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "category"})
 			return
 		}
+
+		var priceFrom int64
+		if pFrom := query.Get("price_from"); pFrom != "" {
+			val, err := strconv.ParseInt(pFrom, 10, 64)
+			if err != nil || val < 0 {
+				_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+				utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "price_from"})
+				return
+			}
+			priceFrom = val
+		}
+
+		var priceTo int64
+		if pTo := query.Get("price_to"); pTo != "" {
+			val, err := strconv.ParseInt(pTo, 10, 64)
+			if err != nil || val < 0 {
+				_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+				utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "price_to"})
+				return
+			}
+			priceTo = val
+		}
+
+		var dateFrom time.Time
+		if dFrom := query.Get("date_from"); dFrom != "" {
+			t, err := time.Parse(DateLayout, dFrom)
+			if err != nil {
+				_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+				utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "date_from"})
+				return
+			}
+			dateFrom = t
+		}
+
+		var dateTo time.Time
+		if dTo := query.Get("date_to"); dTo != "" {
+			t, err := time.Parse(DateLayout, dTo)
+			if err != nil {
+				_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+				utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "date_to"})
+				return
+			}
+			dateTo = t
+		}
+
+		filter := model.EventFilter{
+			ID:        query.Get("id"),
+			Title:     query.Get("title"),
+			Category:  query.Get("category"),
+			PriceFrom: priceFrom,
+			PriceTo:   priceTo,
+			City:      query.Get("city"),
+			DateFrom:  dateFrom,
+			DateTo:    dateTo,
+			User:      query.Get("user"),
+			Offset:    offset,
+			Limit:     limit,
+		}
+
+		events, _ := h.domain.GetEvents(ctx, filter)
 
 		resp := map[string]interface{}{
 			"events": events,
 			"count":  len(events),
 		}
-		h.writeSessionResponse(w, cookie.Value, h.ttl, http.StatusOK)
-		err = json.NewEncoder(w).Encode(resp)
-		return
+
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
+		_ = json.NewEncoder(w).Encode(resp)
+	case http.MethodPost:
+		var event model.Event
+		_ = json.NewDecoder(r.Body).Decode(&event)
+
+		if event.Address != "" && event.Location.Address == "" {
+			event.Location.Address = event.Address
+		}
+		if event.Location.Address != "" && event.Address == "" {
+			event.Address = event.Location.Address
+		}
+
+		if event.Title == "" {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "title"})
+			return
+		}
+		if event.Location.Address == "" {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "address"})
+			return
+		}
+		if event.StartedAt == "" {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "started_at"})
+			return
+		}
+		if event.FinishedAt == "" {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "finished_at"})
+			return
+		}
+
+		userID, err := h.domain.GetInternalUserID(ctx, sid)
+		if err != nil { // TODO: кастомная ошибка
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusUnauthorized)
+			return
+		}
+
+		_, err = h.domain.GetEventsByUserID(ctx, userID)
+		if err == nil {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
+			utils.EncodeErrorResponse(w, ErrEventAlreadyExists)
+			return
+		}
+
+		eventID, _ := h.domain.RegisterEvent(ctx, userID, event)
+		_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusCreated)
+		_ = json.NewEncoder(w).Encode(fmt.Sprintf("id: %d", eventID))
 	}
 }
 
-func (h *Handler) writeSessionResponse(w http.ResponseWriter, sid string, ttl time.Duration, status int) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "X-Session-Id",
-		Value:    sid,
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   int(ttl.Seconds()),
-	})
-	if status != http.StatusUnauthorized {
-		w.Header().Set("Content-Type", "application/json")
+func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	cookie, _ := r.Cookie("X-Session-Id")
+	sid := model.NewSid(cookie.Value)
+
+	id := r.URL.Query().Get("id")
+
+	switch r.Method {
+	case http.MethodPatch:
+		var event model.Event
+		_ = json.NewDecoder(r.Body).Decode(&event)
+
+		validCategories := map[string]bool{"meetup": true, "concert": true, "exhibition": true, "party": true, "other": true}
+		if !validCategories[event.Category] {
+			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "category"})
+			return
+		}
+
+		if event.Price < 0 {
+			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "price"})
+			return
+		}
+
+		_ = h.domain.UpdateEventsLocationCity(ctx, id, event.Location.City)
+
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNoContent)
+	case http.MethodGet:
+		event, err := h.domain.GetEventByID(ctx, id)
+		if err != nil { // TODO: custom error
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
+			utils.EncodeErrorResponse(w, ErrEventNotExist)
+			return
+		}
+
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
+		_ = json.NewEncoder(w).Encode(event)
 	}
-	w.WriteHeader(status)
 }

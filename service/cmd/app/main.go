@@ -17,7 +17,8 @@ import (
 	"samarina/ndbx/internal/handlers/health"
 	session2 "samarina/ndbx/internal/handlers/session"
 	users2 "samarina/ndbx/internal/handlers/users"
-	mongodb "samarina/ndbx/internal/repository/mongo"
+	storageevents "samarina/ndbx/internal/repository/mongo/events"
+	storageusers "samarina/ndbx/internal/repository/mongo/users"
 	"samarina/ndbx/internal/repository/redis"
 	"strconv"
 	"time"
@@ -93,8 +94,8 @@ func main() {
 	redisStorage := redis.NewStorage(redisClient)
 	sessionDomain := session.NewDomain(redisStorage)
 
-	mongodbUsersStorage := mongodb.NewStorage(db, "users")
-	mongodbEventsStorage := mongodb.NewStorage(db, "events")
+	mongodbUsersStorage := storageusers.NewStorage(db, "users")
+	mongodbEventsStorage := storageevents.NewStorage(db, "events")
 
 	// indexes
 	userIndexes := []mongo.IndexModel{
@@ -137,8 +138,11 @@ func main() {
 	// handlers
 	http.Handle("/health", health.New(ttl))
 	http.Handle("/session", session2.New(sessionDomain, ttl))
-	http.Handle("/users", users2.New(usersDomain, ttl))
-	http.Handle("/events", events2.New(eventsDomain, ttl))
+	http.HandleFunc("/users", users2.New(usersDomain, ttl).RegisterOrGetUsers)
+	http.HandleFunc("/users/{id}", users2.New(usersDomain, ttl).GetUserByID)
+	http.HandleFunc("/users/{id}/events", users2.New(usersDomain, ttl).GetUserEventsByUserID)
+	http.HandleFunc("/events", events2.New(eventsDomain, ttl).RegisterOrGetEvents)
+	http.HandleFunc("/events/{id}", events2.New(eventsDomain, ttl).GetOrEditEventData)
 	http.Handle("/auth/login", login2.New(loginDomain, ttl))
 	http.Handle("/auth/logout", logout2.New(logoutDomain, ttl))
 

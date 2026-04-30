@@ -3,22 +3,22 @@ package session
 import (
 	"context"
 	"log"
-	"samarina/ndbx/internal/domains/types"
+	"samarina/ndbx/internal/model"
 	"samarina/ndbx/internal/utils"
 	"time"
 )
 
-func (d *Domain) CreateSession(ctx context.Context, ttl time.Duration) (*types.Sid, error) {
+func (d *Domain) CreateSession(ctx context.Context, ttl time.Duration) (model.Sid, error) {
 	hexString, err := utils.RandHexString()
 	if err != nil {
-		log.Printf("Error generating session id: %v", err)
-		return nil, err
+		log.Printf("Error generating auth id: %v", err)
+		return model.Sid{}, err
 	}
-	sid := types.NewSid(hexString)
+	sid := model.NewSid(hexString)
 	err = d.storage.CreateSession(ctx, sid, ttl)
 	if err != nil {
-		log.Printf("Error create session: %v", err)
-		return nil, err
+		log.Printf("Error create auth: %v", err)
+		return model.Sid{}, err
 	}
 	return sid, nil
 }

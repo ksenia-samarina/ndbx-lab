@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"samarina/ndbx/internal/domains/types"
+	"samarina/ndbx/internal/model"
 
 	redisdb "github.com/redis/go-redis/v9"
 )
 
-func (s *Storage) GetInternalUserID(ctx context.Context, sid *types.Sid) (string, error) {
+func (s *Storage) GetInternalUserID(ctx context.Context, sid model.Sid) (string, error) {
 	userID, err := s.client.HGet(ctx, sid.SidString, "user_id").Result()
 	if errors.Is(err, redisdb.Nil) {
 		return "", nil
