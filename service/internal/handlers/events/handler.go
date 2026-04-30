@@ -181,7 +181,7 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_, err = h.domain.GetEventsByUserID(ctx, userID)
-		if err != nil {
+		if err == nil {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
 			utils.EncodeErrorResponse(w, ErrEventAlreadyExists)
 			return
@@ -213,7 +213,7 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 		var event model.Event
 		_ = json.NewDecoder(r.Body).Decode(&event)
 
-		validCategories := map[string]bool{"meetup": true, "concert": true, "exhibition": true, "party": true, "other": true}
+		validCategories := map[string]bool{"": true, "meetup": true, "concert": true, "exhibition": true, "party": true, "other": true}
 		if !validCategories[event.Category] {
 			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
