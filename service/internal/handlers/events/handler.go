@@ -190,7 +190,9 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 		eventID, _ := h.domain.RegisterEvent(ctx, userID, event)
 		_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusCreated)
-		_ = json.NewEncoder(w).Encode(fmt.Sprintf("id: %d", eventID))
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"id": fmt.Sprintf("%v", eventID),
+		})
 	}
 }
 
