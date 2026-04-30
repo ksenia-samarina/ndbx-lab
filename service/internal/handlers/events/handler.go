@@ -180,11 +180,13 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err = h.domain.GetEventsByUserID(ctx, userID)
-		if err == nil {
-			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
-			utils.EncodeErrorResponse(w, ErrEventAlreadyExists)
-			return
+		events, err := h.domain.GetEventsByUserID(ctx, userID)
+		for _, e := range events {
+			if e.Title == event.Title {
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
+				utils.EncodeErrorResponse(w, ErrEventAlreadyExists)
+				return
+			}
 		}
 
 		eventID, _ := h.domain.RegisterEvent(ctx, userID, event)
