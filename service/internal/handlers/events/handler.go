@@ -181,7 +181,7 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 		}
 
 		_, err = h.domain.GetEventsByUserID(ctx, userID)
-		if err == nil {
+		if err != nil {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
 			utils.EncodeErrorResponse(w, ErrEventAlreadyExists)
 			return
