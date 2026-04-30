@@ -28,7 +28,11 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	cookie, _ := r.Cookie("X-Session-Id")
-	sid := model.NewSid(cookie.Value)
+	var hexString string
+	if cookie != nil {
+		hexString = cookie.Value
+	}
+	sid := model.NewSid(hexString)
 
 	switch r.Method {
 	case http.MethodGet:
@@ -194,7 +198,11 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	cookie, _ := r.Cookie("X-Session-Id")
-	sid := model.NewSid(cookie.Value)
+	var hexString string
+	if cookie != nil {
+		hexString = cookie.Value
+	}
+	sid := model.NewSid(hexString)
 
 	id := r.URL.Query().Get("id")
 
