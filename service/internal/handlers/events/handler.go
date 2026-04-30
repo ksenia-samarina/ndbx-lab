@@ -230,8 +230,14 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		currentUserID, err := h.domain.GetInternalUserID(ctx, sid)
+		if err != nil {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusUnauthorized)
+			return
+		}
+
 		existedEvent, err := h.domain.GetEventByID(ctx, id)
-		if err != nil || existedEvent.CreatedBy != event.CreatedBy {
+		if err != nil || existedEvent.CreatedBy != currentUserID {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
 			utils.EncodeErrorResponse(w, ErrEventNotFound)
 			return
