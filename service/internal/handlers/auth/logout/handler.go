@@ -37,6 +37,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	sid := model.NewSid(cookie.Value)
 
+	exists, _ := h.domain.GetSession(ctx, sid)
+	if !exists {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 	err = h.domain.DeleteSession(ctx, sid)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)

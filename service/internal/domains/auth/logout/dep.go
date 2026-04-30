@@ -7,4 +7,5 @@ import (
 
 type storage interface {
 	DeleteSession(ctx context.Context, sid model.Sid) error
+	GetSession(ctx context.Context, sid model.Sid) (bool, error)
 }
