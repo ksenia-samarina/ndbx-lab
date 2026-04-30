@@ -208,7 +208,7 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 	}
 	sid := model.NewSid(hexString)
 
-	id := r.URL.Query().Get("id")
+	id := r.PathValue("id")
 
 	switch r.Method {
 	case http.MethodPatch:
