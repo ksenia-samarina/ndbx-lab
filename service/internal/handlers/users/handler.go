@@ -25,7 +25,11 @@ func (h *Handler) RegisterOrGetUsers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	cookie, _ := r.Cookie("X-Session-Id")
-	sid := model.NewSid(cookie.Value)
+	var hexString string
+	if cookie != nil {
+		hexString = cookie.Value
+	}
+	sid := model.NewSid(hexString)
 
 	switch r.Method {
 	case http.MethodGet: // Возвращает список организаторов, отвечающий параметрам поиска
@@ -99,7 +103,11 @@ func (h *Handler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	cookie, _ := r.Cookie("X-Session-Id")
-	sid := model.NewSid(cookie.Value)
+	var hexString string
+	if cookie != nil {
+		hexString = cookie.Value
+	}
+	sid := model.NewSid(hexString)
 
 	id := r.PathValue("id")
 	user, err := h.domain.GetUserByUserID(ctx, id)
@@ -116,7 +124,11 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 	ctx := r.Context()
 
 	cookie, _ := r.Cookie("X-Session-Id")
-	sid := model.NewSid(cookie.Value)
+	var hexString string
+	if cookie != nil {
+		hexString = cookie.Value
+	}
+	sid := model.NewSid(hexString)
 
 	id := r.PathValue("id")
 	_, err := h.domain.GetUserByUserID(ctx, id)
