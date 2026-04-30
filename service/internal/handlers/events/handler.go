@@ -230,6 +230,13 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		existedEvent, err := h.domain.GetEventByID(ctx, id)
+		if err != nil || existedEvent.CreatedBy != event.CreatedBy {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
+			utils.EncodeErrorResponse(w, ErrEventNotFound)
+			return
+		}
+
 		_ = h.domain.UpdateEventsLocationCity(ctx, id, event.Location.City)
 
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNoContent)
