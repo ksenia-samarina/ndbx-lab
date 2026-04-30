@@ -1,4 +1,4 @@
-package session
+package events
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"time"
 )
 
-func (d *Domain) UpdateSession(ctx context.Context, sid *types.Sid, ttl time.Duration) error {
-	err := d.storage.UpdateSession(ctx, sid, ttl)
+func (d *Domain) UpdateUserSession(ctx context.Context, sid *types.Sid, ttl time.Duration) error {
+	err := d.sessionStorage.UpdateSession(ctx, sid, ttl)
 	if err != nil {
 		log.Printf("Error update session: %v", err)
 		return err

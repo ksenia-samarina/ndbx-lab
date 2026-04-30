@@ -7,7 +7,7 @@ import (
 
 const hexStringSize = 16
 
-func HexString() (string, error) {
+func RandHexString() (string, error) {
 	bytes := make([]byte, hexStringSize)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err

@@ -1,4 +1,4 @@
-package session
+package login
 
 import (
 	"context"
@@ -8,14 +8,14 @@ import (
 	"time"
 )
 
-func (d *Domain) CreateSession(ctx context.Context, ttl time.Duration) (*types.Sid, error) {
+func (d *Domain) CreateUserSession(ctx context.Context, userID string, ttl time.Duration) (*types.Sid, error) {
 	hexString, err := utils.RandHexString()
 	if err != nil {
 		log.Printf("Error generating session id: %v", err)
 		return nil, err
 	}
 	sid := types.NewSid(hexString)
-	err = d.storage.CreateSession(ctx, sid, ttl)
+	err = d.sessionStorage.CreateUserSession(ctx, userID, sid, ttl)
 	if err != nil {
 		log.Printf("Error create session: %v", err)
 		return nil, err
