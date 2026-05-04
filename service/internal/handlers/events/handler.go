@@ -172,11 +172,6 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "address"})
 			return
 		}
-		if event.Location.City == "" {
-			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "city"})
-			return
-		}
 		if event.StartedAt == "" {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
 			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "started_at"})
