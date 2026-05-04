@@ -71,7 +71,7 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var priceFrom int64
+		var priceFrom int64 = -1
 		if pFrom := query.Get("price_from"); pFrom != "" {
 			val, err := strconv.ParseInt(pFrom, 10, 64)
 			if err != nil || val < 0 {
@@ -83,7 +83,7 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			priceFrom = val
 		}
 
-		var priceTo int64
+		var priceTo int64 = -1
 		if pTo := query.Get("price_to"); pTo != "" {
 			val, err := strconv.ParseInt(pTo, 10, 64)
 			if err != nil || val < 0 {
