@@ -15,4 +15,6 @@ type domain interface {
 	UpdateEventsLocationCity(ctx context.Context, id string, city string) error
 	GetEventByID(ctx context.Context, createdBy string) (model.Event, error)
 	GetEvents(ctx context.Context, filters model.EventFilter) ([]model.Event, error)
+
+	GetUserByUsername(ctx context.Context, username string) (model.User, error)
 }

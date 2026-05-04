@@ -17,4 +17,5 @@ type eventsStorage interface {
 	GetEvents(ctx context.Context, filters model.EventFilter) ([]model.Event, error)
 	RegisterEvent(ctx context.Context, createdBy string, event model.Event) (string, error)
 	UpdateEventsLocationCity(ctx context.Context, id string, city string) error
+	GetUserByUsername(ctx context.Context, username string) (model.User, error)
 }
