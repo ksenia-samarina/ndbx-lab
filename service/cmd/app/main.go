@@ -112,7 +112,7 @@ func main() {
 	eventIndexes := []mongo.IndexModel{
 		{
 			Keys:    bson.D{{Key: "title", Value: 1}},
-			Options: options.Index().SetUnique(true),
+			Options: options.Index().SetUnique(true).SetSparse(true),
 		},
 		{
 			Keys: bson.D{
