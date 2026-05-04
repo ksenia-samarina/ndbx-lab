@@ -126,6 +126,14 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			if err == nil {
 				createdBy = user.ID.Hex()
 			}
+			if err != nil {
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{
+					"events": []model.Event{},
+					"count":  0,
+				})
+				return
+			}
 		}
 
 		filter := model.EventFilter{
