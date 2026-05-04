@@ -123,7 +123,7 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 		username := query.Get("user")
 		if username != "" {
 			user, err := h.domain.GetUserByUsername(ctx, username)
-			if err != nil {
+			if err == nil {
 				createdBy = user.ID.Hex()
 			}
 		}
