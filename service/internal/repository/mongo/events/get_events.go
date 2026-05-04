@@ -41,7 +41,8 @@ func (s *Storage) GetEvents(ctx context.Context, filters model.EventFilter) ([]m
 			dateFilter["$gte"] = filters.DateFrom.Format(time.RFC3339)
 		}
 		if !filters.DateTo.IsZero() {
-			dateFilter["$lte"] = filters.DateTo.Format(time.RFC3339)
+			endOfDay := filters.DateTo.Add(24*time.Hour - time.Second)
+			dateFilter["$lte"] = endOfDay.Format(time.RFC3339)
 		}
 		filter["started_at"] = dateFilter
 	}
