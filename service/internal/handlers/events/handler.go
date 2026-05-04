@@ -119,23 +119,6 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			dateTo = t
 		}
 
-		var createdBy = ""
-		username := query.Get("user")
-		if username != "" {
-			user, err := h.domain.GetUserByUsername(ctx, username)
-			if err == nil {
-				createdBy = user.ID.Hex()
-			}
-			if err != nil {
-				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
-				_ = json.NewEncoder(w).Encode(map[string]interface{}{
-					"events": []model.Event{},
-					"count":  0,
-				})
-				return
-			}
-		}
-
 		filter := model.EventFilter{
 			ID:        query.Get("id"),
 			Title:     query.Get("title"),
@@ -145,7 +128,7 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			City:      query.Get("city"),
 			DateFrom:  dateFrom,
 			DateTo:    dateTo,
-			User:      createdBy,
+			User:      query.Get("user"),
 			Offset:    offset,
 			Limit:     limit,
 		}
