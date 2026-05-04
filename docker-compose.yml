@@ -9,8 +9,10 @@ services:
     ports:
       - "${APP_HOST}:${APP_PORT}:${APP_PORT}"
     depends_on:
-      - redis_db
-      - mongodb
+      mongos:
+        condition: service_healthy
+      redis_db:
+        condition: service_started
     restart: unless-stopped
 
   redis_db:
@@ -19,21 +21,63 @@ services:
     ports:
       - "${REDIS_PORT}:${REDIS_PORT}"
     restart: unless-stopped
-#    command: redis-server --requirepass ${REDIS_PASSWORD}
 
-  mongodb:
+  cfg-1:
+    image: mongo:7.0
+    container_name: cfg-1
+    command: mongod --configsvr --replSet cfg-rs --port ${MONGODB_PORT} --bind_ip_all
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "${MONGODB_PORT}", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  shard-1-a:
+    image: mongo:7.0
+    container_name: shard-1-a
+    command: mongod --shardsvr --replSet shard-1-rs --port ${MONGODB_PORT} --bind_ip_all
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "${MONGODB_PORT}", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  shard-1-b:
+    image: mongo:7.0
+    container_name: shard-1-b
+    command: mongod --shardsvr --replSet shard-1-rs --port ${MONGODB_PORT} --bind_ip_all
+
+  shard-1-c:
+    image: mongo:7.0
+    container_name: shard-1-c
+    command: mongod --shardsvr --replSet shard-1-rs --port ${MONGODB_PORT} --bind_ip_all
+
+  mongos:
     image: mongo:7.0
     container_name: ${MONGODB_HOST}
-    restart: unless-stopped
+    command: mongos --configdb cfg-rs/cfg-1:${MONGODB_PORT} --port ${MONGODB_PORT} --bind_ip_all
     ports:
       - "${MONGODB_PORT}:${MONGODB_PORT}"
+    depends_on:
+      cfg-1:
+        condition: service_healthy
+      shard-1-a:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "${MONGODB_PORT}", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo-init:
+    image: mongo:7.0
+    container_name: mongo-init
     env_file:
       - .env.local
-#    environment:
-#      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USER}
-#      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
     volumes:
-      - mongo_data:/data/db
-
-volumes:
-  mongo_data:
+      - ./init-shard.sh:/init-shard.sh
+    entrypoint: ["/bin/bash", "/init-shard.sh"]
+    depends_on:
+      - mongos
+      - cfg-1
+      - shard-1-a
