@@ -27,7 +27,7 @@ services:
     container_name: cfg-1
     command: mongod --configsvr --replSet cfg-rs --port ${MONGODB_PORT} --bind_ip_all
     healthcheck:
-      test: ["CMD", "mongosh", "--port", "${MONGODB_PORT}", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongosh", "--port", "${MONGODB_PORT}", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -37,7 +37,7 @@ services:
     container_name: shard-1-a
     command: mongod --shardsvr --replSet shard-1-rs --port ${MONGODB_PORT} --bind_ip_all
     healthcheck:
-      test: ["CMD", "mongosh", "--port", "${MONGODB_PORT}", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongosh", "--port", "${MONGODB_PORT}", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -47,10 +47,31 @@ services:
     container_name: shard-1-b
     command: mongod --shardsvr --replSet shard-1-rs --port ${MONGODB_PORT} --bind_ip_all
 
+
   shard-1-c:
     image: mongo:7.0
     container_name: shard-1-c
     command: mongod --shardsvr --replSet shard-1-rs --port ${MONGODB_PORT} --bind_ip_all
+
+  shard-2-a:
+    image: mongo:7.0
+    container_name: shard-2-a
+    command: mongod --shardsvr --replSet shard-2-rs --port ${MONGODB_PORT} --bind_ip_all
+    healthcheck:
+      test: [ "CMD", "mongosh", "--port", "${MONGODB_PORT}", "--eval", "db.adminCommand('ping')" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  shard-2-b:
+    image: mongo:7.0
+    container_name: shard-2-b
+    command: mongod --shardsvr --replSet shard-2-rs --port ${MONGODB_PORT} --bind_ip_all
+
+  shard-2-c:
+    image: mongo:7.0
+    container_name: shard-2-c
+    command: mongod --shardsvr --replSet shard-2-rs --port ${MONGODB_PORT} --bind_ip_all
 
   mongos:
     image: mongo:7.0
@@ -63,8 +84,10 @@ services:
         condition: service_healthy
       shard-1-a:
         condition: service_healthy
+      shard-2-a:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "mongosh", "--port", "${MONGODB_PORT}", "--eval", "db.adminCommand('ping')"]
+      test: [ "CMD", "mongosh", "--port", "${MONGODB_PORT}", "--eval", "db.adminCommand('ping')" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -76,8 +99,9 @@ services:
       - .env.local
     volumes:
       - ./init-shard.sh:/init-shard.sh
-    entrypoint: ["/bin/bash", "/init-shard.sh"]
+    entrypoint: [ "/bin/bash", "/init-shard.sh" ]
     depends_on:
       - mongos
       - cfg-1
       - shard-1-a
+      - shard-2-a
