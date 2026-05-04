@@ -122,6 +122,7 @@ func main() {
 				{Key: "title", Value: 1},
 				{Key: "created_by", Value: 1},
 			},
+			Options: options.Index().SetUnique(true),
 		},
 		{
 			Keys: bson.D{{Key: "created_by", Value: 1}},
