@@ -111,11 +111,7 @@ func main() {
 
 	eventIndexes := []mongo.IndexModel{
 		{
-			Keys:    bson.D{{Key: "title", Value: 1}},
-			Options: options.Index().SetSparse(true),
-		},
-		{
-			Keys: bson.D{{Key: "created_by", Value: "hashed"}},
+			Keys: bson.D{{Key: "title", Value: 1}},
 		},
 		{
 			Keys: bson.D{
@@ -132,7 +128,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	usersDomain := users.NewDomain(redisStorage, mongodbUsersStorage)
+	usersDomain := users.NewDomain(redisStorage, mongodbUsersStorage, mongodbEventsStorage)
 	eventsDomain := events.NewDomain(redisStorage, mongodbEventsStorage)
 
 	loginDomain := login.NewDomain(redisStorage, mongodbUsersStorage)

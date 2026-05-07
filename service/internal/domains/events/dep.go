@@ -9,6 +9,7 @@ import (
 type sessionStorage interface {
 	UpdateSession(ctx context.Context, sid model.Sid, ttl time.Duration) error
 	GetInternalUserID(ctx context.Context, sid model.Sid) (string, error)
+	GetSession(ctx context.Context, sid model.Sid) (bool, error)
 }
 
 type eventsStorage interface {

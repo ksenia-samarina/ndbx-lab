@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"log"
 	"samarina/ndbx/internal/model"
 	"time"
 
@@ -42,16 +43,20 @@ func (s *Storage) GetEvents(ctx context.Context, filters model.EventFilter) ([]m
 		filter["price"] = priceFilter
 	}
 
-	if !filters.DateFrom.IsZero() || !filters.DateTo.IsZero() {
-		dateFilter := bson.M{}
-		if !filters.DateFrom.IsZero() {
-			dateFilter["$gte"] = filters.DateFrom.Format(time.RFC3339)
+	if filters.DateFrom != "" || filters.DateTo != "" {
+		if filters.DateFrom != "" {
+			filter["started_at"] = bson.M{"$gte": filters.DateFrom}
 		}
-		if !filters.DateTo.IsZero() {
-			endOfDay := time.Date(filters.DateTo.Year(), filters.DateTo.Month(), filters.DateTo.Day(), 23, 59, 59, 0, filters.DateTo.Location())
-			dateFilter["$lte"] = endOfDay.Format(time.RFC3339)
+		if filters.DateTo == "" {
+			filters.DateTo = filters.DateFrom
 		}
-		filter["started_at"] = dateFilter
+		if filters.DateTo != "" {
+			log.Printf("dateTo: %s", filters.DateTo)
+			t, _ := time.Parse(time.RFC3339, filters.DateTo)
+			t = t.Add(time.Hour * 21)
+			filter["finished_at"] = bson.M{"$lt": t.Format(time.RFC3339)}
+			log.Printf("dateTo t: %s", t.Format(time.RFC3339))
+		}
 	}
 	if filters.User != "" {
 		filter["created_by"] = filters.User
@@ -74,5 +79,6 @@ func (s *Storage) GetEvents(ctx context.Context, filters model.EventFilter) ([]m
 		return nil, err
 	}
 
+	log.Printf("getEventFilters: %v, events: %v", filters, events)
 	return events, nil
 }

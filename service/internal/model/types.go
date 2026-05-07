@@ -1,8 +1,6 @@
 package model
 
 import (
-	"time"
-
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -59,8 +57,8 @@ type EventFilter struct {
 	PriceFrom int64
 	PriceTo   int64
 	City      string
-	DateFrom  time.Time
-	DateTo    time.Time
+	DateFrom  string
+	DateTo    string
 	User      string
 	Offset    int64
 	Limit     int64

@@ -2,12 +2,15 @@ package users
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"samarina/ndbx/internal/handlers/utils"
 	"samarina/ndbx/internal/model"
 	"strconv"
 	"time"
 )
+
+const DateLayout = "20060102"
 
 type Handler struct {
 	domain domain
@@ -118,6 +121,7 @@ func (h *Handler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	}
 	utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
 	_ = json.NewEncoder(w).Encode(user)
+	_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
 }
 
 func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) {
@@ -131,14 +135,113 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 	sid := model.NewSid(hexString)
 
 	id := r.PathValue("id")
-	_, err := h.domain.GetUserByUserID(ctx, id)
+	log.Printf("userId: %s", id)
+	user, err := h.domain.GetUserByUserID(ctx, id)
 	if err != nil { // TODO: кастомная ошибка что нет пользака
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
 		utils.EncodeErrorResponse(w, ErrUserNotFound)
 		return
 	}
 
-	events, _ := h.domain.GetUserEventsByUserID(ctx, id)
+	query := r.URL.Query()
+
+	limitStr := query.Get("limit")
+	limit := int64(-1)
+	if limitStr != "" {
+		l, err := strconv.ParseInt(limitStr, 10, 64)
+		if err != nil || l < 0 {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "limit"})
+			return
+		}
+		limit = l
+	}
+
+	offsetStr := query.Get("offset")
+	offset := int64(0)
+	if offsetStr != "" {
+		off, err := strconv.ParseInt(offsetStr, 10, 64)
+		if err != nil || off < 0 {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "offset"})
+			return
+		}
+		offset = off
+	}
+
+	category := query.Get("category")
+	validCategories := map[string]bool{"": true, "meetup": true, "concert": true, "exhibition": true, "party": true, "other": true}
+	if !validCategories[category] {
+		_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+		utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "category"})
+		return
+	}
+
+	var priceFrom int64 = -1
+	if pFrom := query.Get("price_from"); pFrom != "" {
+		val, err := strconv.ParseInt(pFrom, 10, 64)
+		if err != nil || val < 0 {
+			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "price_from"})
+			return
+		}
+		priceFrom = val
+	}
+
+	var priceTo int64 = -1
+	if pTo := query.Get("price_to"); pTo != "" {
+		val, err := strconv.ParseInt(pTo, 10, 64)
+		if err != nil || val < 0 {
+			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "price_to"})
+			return
+		}
+		priceTo = val
+	}
+
+	var dateFrom string
+	if dFrom := query.Get("date_from"); dFrom != "" {
+		t, err := time.Parse(DateLayout, dFrom)
+		if err != nil {
+			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "date_from"})
+			return
+		}
+		dateFrom = t.Format(time.RFC3339)
+	}
+
+	var dateTo string
+	if dTo := query.Get("date_to"); dTo != "" {
+		t, err := time.Parse(DateLayout, dTo)
+		if err != nil {
+			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "date_to"})
+			return
+		}
+		dateTo = t.Format(time.RFC3339)
+	}
+
+	filter := model.EventFilter{
+		ID:        query.Get("id"),
+		Title:     query.Get("title"),
+		Category:  query.Get("category"),
+		PriceFrom: priceFrom,
+		PriceTo:   priceTo,
+		City:      query.Get("city"),
+		DateFrom:  dateFrom,
+		DateTo:    dateTo,
+		User:      id,
+		Offset:    offset,
+		Limit:     limit,
+	}
+
+	events, _ := h.domain.GetUserEventsByUserID(ctx, user.ID.Hex(), filter)
+	log.Printf("events: %v, userId: %s", events, user.ID.Hex())
 
 	resp := map[string]interface{}{
 		"events": events,

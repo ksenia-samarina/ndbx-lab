@@ -17,7 +17,10 @@ type usersStorage interface {
 	RegisterUser(ctx context.Context, user model.User) error
 	GetUserByUsername(ctx context.Context, username string) (model.User, error)
 	GetUserByUserID(ctx context.Context, id string) (model.User, error)
-	GetUserEventsByUserID(ctx context.Context, userID string) ([]model.Event, error)
 	GetUsers(ctx context.Context, id, name string, limit, offset uint64) ([]model.User, error)
 	GetInternalUserID(ctx context.Context, username string) (primitive.ObjectID, error)
+}
+
+type eventStorage interface {
+	GetUserEventsByUserID(ctx context.Context, userID string, filter model.EventFilter) ([]model.Event, error)
 }

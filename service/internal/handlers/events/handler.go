@@ -3,6 +3,7 @@ package events
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"samarina/ndbx/internal/handlers/utils"
 	"samarina/ndbx/internal/model"
@@ -135,12 +136,14 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			PriceFrom: priceFrom,
 			PriceTo:   priceTo,
 			City:      query.Get("city"),
-			DateFrom:  dateFrom,
-			DateTo:    dateTo,
+			DateFrom:  dateFrom.Format(time.RFC3339),
+			DateTo:    dateTo.Format(time.RFC3339),
 			User:      createdBy,
 			Offset:    offset,
 			Limit:     limit,
 		}
+
+		log.Printf("get createdBy: %s, %s", createdBy, username)
 
 		events, _ := h.domain.GetEvents(ctx, filter)
 
@@ -239,14 +242,22 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		existedEvent, err := h.domain.GetEventByID(ctx, id)
+		log.Printf("got GetEventByID: %s, %s, %s", existedEvent, sid, id)
+		if err != nil {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
+			utils.EncodeErrorResponse(w, ErrEventNotFound)
+			return
+		}
+
 		currentUserID, err := h.domain.GetInternalUserID(ctx, sid)
+		log.Printf("got GetInternalUserID: %s, %s, %s", currentUserID, sid, id)
 		if err != nil {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusUnauthorized)
 			return
 		}
 
-		existedEvent, err := h.domain.GetEventByID(ctx, id)
-		if err != nil || existedEvent.CreatedBy != currentUserID {
+		if existedEvent.CreatedBy != currentUserID {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
 			utils.EncodeErrorResponse(w, ErrEventNotFound)
 			return
@@ -257,7 +268,9 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNoContent)
 	case http.MethodGet:
 		event, err := h.domain.GetEventByID(ctx, id)
+		log.Printf("got event: %v", event, id)
 		if err != nil { // TODO: custom error
+			log.Printf("got error event: %v, %s, %s", event, id, err.Error())
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
 			utils.EncodeErrorResponse(w, ErrEventNotExist)
 			return
