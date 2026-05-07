@@ -43,14 +43,17 @@ func (s *Storage) GetEvents(ctx context.Context, filters model.EventFilter) ([]m
 		filter["price"] = priceFilter
 	}
 
-	if filters.DateFrom != "" || filters.DateTo != "" {
-		if filters.DateFrom != "" {
+	log.Printf("datefrom,dateto, %s, %s", filters.DateFrom, filters.DateTo)
+	dateFrom, _ := time.Parse(time.RFC3339, filters.DateFrom)
+	dateTo, _ := time.Parse(time.RFC3339, filters.DateFrom)
+	if !dateFrom.IsZero() || !dateTo.IsZero() {
+		if !dateFrom.IsZero() {
 			filter["started_at"] = bson.M{"$gte": filters.DateFrom}
 		}
-		if filters.DateTo == "" {
+		if !dateTo.IsZero() {
 			filters.DateTo = filters.DateFrom
 		}
-		if filters.DateTo != "" {
+		if !dateTo.IsZero() {
 			log.Printf("dateTo: %s", filters.DateTo)
 			t, _ := time.Parse(time.RFC3339, filters.DateTo)
 			t = t.Add(time.Hour * 21)
