@@ -2,7 +2,6 @@ package users
 
 import (
 	"context"
-	"log"
 	"samarina/ndbx/internal/model"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -12,7 +11,6 @@ func (s *Storage) GetUserEventsByUserID(ctx context.Context, userID string) ([]m
 	filter := bson.M{"created_by": userID}
 
 	cursor, err := s.collection.Find(ctx, filter)
-	log.Printf("curssor filters: %v", filter)
 	if err != nil {
 		return nil, err
 	}
@@ -22,6 +20,5 @@ func (s *Storage) GetUserEventsByUserID(ctx context.Context, userID string) ([]m
 	if err := cursor.All(ctx, &events); err != nil {
 		return nil, err
 	}
-	log.Printf("curssor events: %v", events)
 	return events, nil
 }

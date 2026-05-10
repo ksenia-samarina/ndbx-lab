@@ -17,7 +17,6 @@ func (d *Domain) RegisterUser(ctx context.Context, user model.User, ttl time.Dur
 	if err != nil {
 		return model.Sid{}, err
 	}
-
 	hexString, err := utils.RandHexString()
 	if err != nil {
 		return model.Sid{}, err

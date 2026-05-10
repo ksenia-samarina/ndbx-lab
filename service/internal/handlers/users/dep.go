@@ -11,7 +11,7 @@ type domain interface {
 	GetUserByUsername(ctx context.Context, username string) (model.User, error)
 	GetUsers(ctx context.Context, id, name string, limit, offset uint64) ([]model.User, error)
 	GetUserByUserID(ctx context.Context, id string) (model.User, error)
-	GetUserEventsByUserID(ctx context.Context, userID string, filter model.EventFilter) ([]model.Event, error)
+	GetEvents(ctx context.Context, filter model.EventFilter) ([]model.Event, error)
 
 	UpdateUserSession(ctx context.Context, sid model.Sid, ttl time.Duration) error
 }

@@ -2,7 +2,6 @@ package events
 
 import (
 	"context"
-	"log"
 	"samarina/ndbx/internal/model"
 	"time"
 
@@ -43,7 +42,6 @@ func (s *Storage) GetEvents(ctx context.Context, filters model.EventFilter) ([]m
 		filter["price"] = priceFilter
 	}
 
-	log.Printf("datefrom,dateto, %s, %s", filters.DateFrom, filters.DateTo)
 	dateFrom, _ := time.Parse(time.RFC3339, filters.DateFrom)
 	dateTo, _ := time.Parse(time.RFC3339, filters.DateFrom)
 	if !dateFrom.IsZero() || !dateTo.IsZero() {
@@ -54,11 +52,9 @@ func (s *Storage) GetEvents(ctx context.Context, filters model.EventFilter) ([]m
 			filters.DateTo = filters.DateFrom
 		}
 		if !dateTo.IsZero() {
-			log.Printf("dateTo: %s", filters.DateTo)
 			t, _ := time.Parse(time.RFC3339, filters.DateTo)
 			t = t.Add(time.Hour * 21)
 			filter["finished_at"] = bson.M{"$lt": t.Format(time.RFC3339)}
-			log.Printf("dateTo t: %s", t.Format(time.RFC3339))
 		}
 	}
 	if filters.User != "" {
@@ -82,6 +78,5 @@ func (s *Storage) GetEvents(ctx context.Context, filters model.EventFilter) ([]m
 		return nil, err
 	}
 
-	log.Printf("getEventFilters: %v, events: %v", filters, events)
 	return events, nil
 }

@@ -9,7 +9,6 @@ import (
 type domain interface {
 	UpdateUserSession(ctx context.Context, sid model.Sid, ttl time.Duration) error
 	GetInternalUserID(ctx context.Context, sid model.Sid) (string, error)
-	GetSession(ctx context.Context, sid model.Sid) (bool, error)
 
 	GetEventsByUserID(ctx context.Context, id string) ([]model.Event, error)
 	RegisterEvent(ctx context.Context, createdBy string, event model.Event) (string, error)

@@ -3,7 +3,6 @@ package events
 import (
 	"context"
 	"errors"
-	"log"
 	"samarina/ndbx/internal/model"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -16,9 +15,7 @@ func (s *Storage) GetEventByID(ctx context.Context, id string) (model.Event, err
 
 	var event model.Event
 	err := s.collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&event)
-	log.Printf("got event in GetEventById: %v, %s", event, id)
 	if errors.Is(err, mongo.ErrNoDocuments) {
-		log.Printf("got error event in GetEventById: %v, %s", event, id)
 		return model.Event{}, ErrEventNotExist
 	}
 	if err != nil {

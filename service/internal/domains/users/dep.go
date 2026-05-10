@@ -22,5 +22,5 @@ type usersStorage interface {
 }
 
 type eventStorage interface {
-	GetUserEventsByUserID(ctx context.Context, userID string, filter model.EventFilter) ([]model.Event, error)
+	GetEvents(ctx context.Context, filter model.EventFilter) ([]model.Event, error)
 }

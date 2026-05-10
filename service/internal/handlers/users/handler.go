@@ -2,7 +2,6 @@ package users
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"samarina/ndbx/internal/handlers/utils"
 	"samarina/ndbx/internal/model"
@@ -135,8 +134,7 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 	sid := model.NewSid(hexString)
 
 	id := r.PathValue("id")
-	log.Printf("userId: %s", id)
-	user, err := h.domain.GetUserByUserID(ctx, id)
+	_, err := h.domain.GetUserByUserID(ctx, id)
 	if err != nil { // TODO: кастомная ошибка что нет пользака
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
 		utils.EncodeErrorResponse(w, ErrUserNotFound)
@@ -240,8 +238,7 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 		Limit:     limit,
 	}
 
-	events, _ := h.domain.GetUserEventsByUserID(ctx, user.ID.Hex(), filter)
-	log.Printf("events: %v, userId: %s", events, user.ID.Hex())
+	events, _ := h.domain.GetEvents(ctx, filter)
 
 	resp := map[string]interface{}{
 		"events": events,

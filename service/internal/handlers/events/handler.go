@@ -3,7 +3,6 @@ package events
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"samarina/ndbx/internal/handlers/utils"
 	"samarina/ndbx/internal/model"
@@ -143,8 +142,6 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			Limit:     limit,
 		}
 
-		log.Printf("get createdBy: %s, %s", createdBy, username)
-
 		events, _ := h.domain.GetEvents(ctx, filter)
 
 		resp := map[string]interface{}{
@@ -243,7 +240,6 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 		}
 
 		existedEvent, err := h.domain.GetEventByID(ctx, id)
-		log.Printf("got GetEventByID: %s, %s, %s", existedEvent, sid, id)
 		if err != nil {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
 			utils.EncodeErrorResponse(w, ErrEventNotFound)
@@ -251,7 +247,6 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 		}
 
 		currentUserID, err := h.domain.GetInternalUserID(ctx, sid)
-		log.Printf("got GetInternalUserID: %s, %s, %s", currentUserID, sid, id)
 		if err != nil {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusUnauthorized)
 			return
@@ -268,9 +263,7 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNoContent)
 	case http.MethodGet:
 		event, err := h.domain.GetEventByID(ctx, id)
-		log.Printf("got event: %v", event, id)
 		if err != nil { // TODO: custom error
-			log.Printf("got error event: %v, %s, %s", event, id, err.Error())
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
 			utils.EncodeErrorResponse(w, ErrEventNotExist)
 			return
