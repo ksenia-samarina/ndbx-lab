@@ -18,8 +18,8 @@ func WriteSessionResponse(w http.ResponseWriter, hex string, ttl time.Duration, 
 	w.WriteHeader(status)
 }
 
-func EncodeErrorResponse(w http.ResponseWriter, err error) {
-	_ = json.NewEncoder(w).Encode(map[string]string{
+func EncodeErrorResponse(w http.ResponseWriter, err error) error {
+	return json.NewEncoder(w).Encode(map[string]string{
 		"message": err.Error(),
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"samarina/ndbx/internal/domains/validator"
 	"samarina/ndbx/internal/handlers/utils"
@@ -43,7 +44,10 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 		filter, err := h.validatorDomain.ValidateParams(query)
 		if errors.As(err, &target) {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: target.Field})
+			err = utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: target.Field})
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 		}
 
 		var createdBy = ""
@@ -78,22 +82,34 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 
 		if event.Title == "" {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "title"})
+			err := utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "title"})
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 		if event.Location.Address == "" {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "address"})
+			err := utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "address"})
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 		if event.StartedAt == "" {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "started_at"})
+			err := utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "started_at"})
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 		if event.FinishedAt == "" {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "finished_at"})
+			err := utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "finished_at"})
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 
@@ -107,7 +123,10 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 		for _, e := range events {
 			if e.Title == event.Title {
 				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
-				utils.EncodeErrorResponse(w, ErrEventAlreadyExists)
+				err := utils.EncodeErrorResponse(w, ErrEventAlreadyExists)
+				if err != nil {
+					log.Printf("Encode error wasn't sent to client: %v", err)
+				}
 				return
 			}
 		}
@@ -119,9 +138,12 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusCreated)
-		_ = json.NewEncoder(w).Encode(map[string]string{
+		err = json.NewEncoder(w).Encode(map[string]string{
 			"id": fmt.Sprintf("%v", eventID),
 		})
+		if err != nil {
+			log.Printf("Encode error wasn't sent to client: %v", err)
+		}
 	}
 }
 
@@ -150,7 +172,10 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "category"})
+			err = utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "category"})
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 
@@ -161,14 +186,20 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "price"})
+			err = utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "price"})
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 
 		existedEvent, err := h.eventDomain.GetEventByID(ctx, id)
 		if err != nil {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
-			utils.EncodeErrorResponse(w, ErrEventNotFound)
+			err = utils.EncodeErrorResponse(w, ErrEventNotFound)
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 
@@ -180,7 +211,10 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 
 		if existedEvent.CreatedBy != currentUserID {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
-			utils.EncodeErrorResponse(w, ErrEventNotFound)
+			err = utils.EncodeErrorResponse(w, ErrEventNotFound)
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 
@@ -195,11 +229,17 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 		event, err := h.eventDomain.GetEventByID(ctx, id)
 		if err != nil { // TODO: custom error
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
-			utils.EncodeErrorResponse(w, ErrEventNotExist)
+			err = utils.EncodeErrorResponse(w, ErrEventNotExist)
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
-		_ = json.NewEncoder(w).Encode(event)
+		err = json.NewEncoder(w).Encode(event)
+		if err != nil {
+			log.Printf("Encode error wasn't sent to client: %v", err)
+		}
 	}
 }

@@ -3,6 +3,7 @@ package users
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"samarina/ndbx/internal/domains/validator"
 	"samarina/ndbx/internal/handlers/utils"
@@ -41,7 +42,10 @@ func (h *Handler) RegisterOrGetUsers(w http.ResponseWriter, r *http.Request) {
 		limit, err := strconv.ParseInt(query.Get("limit"), 10, 64)
 		if query.Get("limit") != "" && (err != nil || limit < 0) {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "limit"})
+			err = utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "limit"})
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 		if query.Get("limit") == "" {
@@ -51,7 +55,10 @@ func (h *Handler) RegisterOrGetUsers(w http.ResponseWriter, r *http.Request) {
 		offset, err := strconv.ParseInt(query.Get("offset"), 10, 64)
 		if query.Get("offset") != "" && (err != nil || offset < 0) {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "offset"})
+			err = utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "offset"})
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 
@@ -78,7 +85,10 @@ func (h *Handler) RegisterOrGetUsers(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "username"})
+			err = utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "username"})
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 		if user.FullName == "" {
@@ -88,7 +98,10 @@ func (h *Handler) RegisterOrGetUsers(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "full_name"})
+			err = utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "full_name"})
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 		if user.Password == "" {
@@ -98,7 +111,10 @@ func (h *Handler) RegisterOrGetUsers(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "password"})
+			err = utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "password"})
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 
@@ -110,7 +126,10 @@ func (h *Handler) RegisterOrGetUsers(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
-			utils.EncodeErrorResponse(w, ErrUserAlreadyExists)
+			err = utils.EncodeErrorResponse(w, ErrUserAlreadyExists)
+			if err != nil {
+				log.Printf("Encode error wasn't sent to client: %v", err)
+			}
 			return
 		}
 
@@ -137,7 +156,10 @@ func (h *Handler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	user, err := h.userDomain.GetUserByUserID(ctx, id)
 	if err != nil { // TODO: кастомная ошибка что нет пользака
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
-		utils.EncodeErrorResponse(w, ErrUserNotFound)
+		err = utils.EncodeErrorResponse(w, ErrUserNotFound)
+		if err != nil {
+			log.Printf("Encode error wasn't sent to client: %v", err)
+		}
 		return
 	}
 	utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
@@ -163,7 +185,10 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 	_, err := h.userDomain.GetUserByUserID(ctx, id)
 	if err != nil { // TODO: кастомная ошибка что нет пользака
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
-		utils.EncodeErrorResponse(w, ErrUserNotFound)
+		err = utils.EncodeErrorResponse(w, ErrUserNotFound)
+		if err != nil {
+			log.Printf("Encode error wasn't sent to client: %v", err)
+		}
 		return
 	}
 
@@ -173,7 +198,10 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 	filter, err := h.validatorDomain.ValidateParams(query)
 	if errors.As(err, &target) {
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-		utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: target.Field})
+		err = utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: target.Field})
+		if err != nil {
+			log.Printf("Encode error wasn't sent to client: %v", err)
+		}
 	}
 	filter.User = id
 
