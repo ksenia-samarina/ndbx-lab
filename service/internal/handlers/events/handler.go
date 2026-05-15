@@ -113,7 +113,11 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 		}
 
 		eventID, _ := h.eventDomain.RegisterEvent(ctx, userID, event)
-		_ = h.eventDomain.UpdateUserSession(ctx, sid, h.ttl)
+		err = h.eventDomain.UpdateUserSession(ctx, sid, h.ttl)
+		if err != nil {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+			return
+		}
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusCreated)
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"id": fmt.Sprintf("%v", eventID),
@@ -140,14 +144,22 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 
 		validCategories := map[string]struct{}{"": {}, "meetup": {}, "concert": {}, "exhibition": {}, "party": {}, "other": {}}
 		if _, exists := validCategories[event.Category]; !exists {
-			_ = h.eventDomain.UpdateUserSession(ctx, sid, h.ttl)
+			err := h.eventDomain.UpdateUserSession(ctx, sid, h.ttl)
+			if err != nil {
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+				return
+			}
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
 			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "category"})
 			return
 		}
 
 		if event.Price < 0 {
-			_ = h.eventDomain.UpdateUserSession(ctx, sid, h.ttl)
+			err := h.eventDomain.UpdateUserSession(ctx, sid, h.ttl)
+			if err != nil {
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+				return
+			}
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
 			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "price"})
 			return
@@ -172,7 +184,11 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_ = h.eventDomain.UpdateEventsLocationCity(ctx, id, event.Location.City)
+		err = h.eventDomain.UpdateEventsLocationCity(ctx, id, event.Location.City)
+		if err != nil {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+			return
+		}
 
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNoContent)
 	case http.MethodGet:

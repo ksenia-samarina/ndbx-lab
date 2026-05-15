@@ -72,19 +72,31 @@ func (h *Handler) RegisterOrGetUsers(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewDecoder(r.Body).Decode(&user)
 
 		if user.Username == "" {
-			_ = h.userDomain.UpdateUserSession(ctx, sid, h.ttl)
+			err := h.userDomain.UpdateUserSession(ctx, sid, h.ttl)
+			if err != nil {
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+				return
+			}
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
 			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "username"})
 			return
 		}
 		if user.FullName == "" {
-			_ = h.userDomain.UpdateUserSession(ctx, sid, h.ttl)
+			err := h.userDomain.UpdateUserSession(ctx, sid, h.ttl)
+			if err != nil {
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+				return
+			}
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
 			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "full_name"})
 			return
 		}
 		if user.Password == "" {
-			_ = h.userDomain.UpdateUserSession(ctx, sid, h.ttl)
+			err := h.userDomain.UpdateUserSession(ctx, sid, h.ttl)
+			if err != nil {
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+				return
+			}
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
 			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "password"})
 			return
@@ -92,13 +104,21 @@ func (h *Handler) RegisterOrGetUsers(w http.ResponseWriter, r *http.Request) {
 
 		_, err := h.userDomain.GetUserByUsername(ctx, user.Username)
 		if err == nil { // пользователь уже существует
-			_ = h.userDomain.UpdateUserSession(ctx, sid, h.ttl)
+			err = h.userDomain.UpdateUserSession(ctx, sid, h.ttl)
+			if err != nil {
+				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+				return
+			}
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
 			utils.EncodeErrorResponse(w, ErrUserAlreadyExists)
 			return
 		}
 
-		newSid, _ := h.userDomain.RegisterUser(ctx, user, h.ttl)
+		newSid, err := h.userDomain.RegisterUser(ctx, user, h.ttl)
+		if err != nil {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+			return
+		}
 		utils.WriteSessionResponse(w, newSid.HexString, h.ttl, http.StatusCreated)
 	}
 }
@@ -122,7 +142,11 @@ func (h *Handler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	}
 	utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
 	_ = json.NewEncoder(w).Encode(user)
-	_ = h.userDomain.UpdateUserSession(ctx, sid, h.ttl)
+	err = h.userDomain.UpdateUserSession(ctx, sid, h.ttl)
+	if err != nil {
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) {
@@ -153,7 +177,11 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 	}
 	filter.User = id
 
-	events, _ := h.userDomain.GetEvents(ctx, filter)
+	events, err := h.userDomain.GetEvents(ctx, filter)
+	if err != nil {
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+		return
+	}
 
 	resp := map[string]interface{}{
 		"events": events,
