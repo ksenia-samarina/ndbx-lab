@@ -2,25 +2,26 @@ package events
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"samarina/ndbx/internal/domains/validator"
 	"samarina/ndbx/internal/handlers/utils"
 	"samarina/ndbx/internal/model"
-	"strconv"
 	"time"
 )
 
-const DateLayout = "20060102"
-
 type Handler struct {
-	domain domain
-	ttl    time.Duration
+	eventDomain     eventDomain
+	validatorDomain validatorDomain
+	ttl             time.Duration
 }
 
-func New(domain domain, ttl time.Duration) *Handler {
+func New(eventDomain eventDomain, validatorDomain validatorDomain, ttl time.Duration) *Handler {
 	return &Handler{
-		domain: domain,
-		ttl:    ttl,
+		eventDomain:     eventDomain,
+		validatorDomain: validatorDomain,
+		ttl:             ttl,
 	}
 }
 
@@ -38,115 +39,28 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		query := r.URL.Query()
 
-		limitStr := query.Get("limit")
-		limit := int64(-1)
-		if limitStr != "" {
-			l, err := strconv.ParseInt(limitStr, 10, 64)
-			if err != nil || l < 0 {
-				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-				utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "limit"})
-				return
-			}
-			limit = l
-		}
-
-		offsetStr := query.Get("offset")
-		offset := int64(0)
-		if offsetStr != "" {
-			off, err := strconv.ParseInt(offsetStr, 10, 64)
-			if err != nil || off < 0 {
-				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-				utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "offset"})
-				return
-			}
-			offset = off
-		}
-
-		category := query.Get("category")
-		validCategories := map[string]bool{"": true, "meetup": true, "concert": true, "exhibition": true, "party": true, "other": true}
-		if !validCategories[category] {
-			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+		var target *validator.ErrInvalidFieldName
+		filter, err := h.validatorDomain.ValidateParams(query)
+		if errors.As(err, &target) {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "category"})
-			return
-		}
-
-		var priceFrom int64 = -1
-		if pFrom := query.Get("price_from"); pFrom != "" {
-			val, err := strconv.ParseInt(pFrom, 10, 64)
-			if err != nil || val < 0 {
-				_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
-				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-				utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "price_from"})
-				return
-			}
-			priceFrom = val
-		}
-
-		var priceTo int64 = -1
-		if pTo := query.Get("price_to"); pTo != "" {
-			val, err := strconv.ParseInt(pTo, 10, 64)
-			if err != nil || val < 0 {
-				_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
-				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-				utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "price_to"})
-				return
-			}
-			priceTo = val
-		}
-
-		var dateFrom time.Time
-		if dFrom := query.Get("date_from"); dFrom != "" {
-			t, err := time.Parse(DateLayout, dFrom)
-			if err != nil {
-				_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
-				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-				utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "date_from"})
-				return
-			}
-			dateFrom = t
-		}
-
-		var dateTo time.Time
-		if dTo := query.Get("date_to"); dTo != "" {
-			t, err := time.Parse(DateLayout, dTo)
-			if err != nil {
-				_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
-				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
-				utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "date_to"})
-				return
-			}
-			dateTo = t
+			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: target.Field})
 		}
 
 		var createdBy = ""
 		username := query.Get("user")
 		if username != "" {
-			user, err := h.domain.GetUserByUsername(ctx, username)
+			user, err := h.eventDomain.GetUserByUsername(ctx, username)
 			if err == nil {
 				createdBy = user.ID.Hex()
 			}
 		}
+		filter.User = createdBy
 
-		filter := model.EventFilter{
-			ID:        query.Get("id"),
-			Title:     query.Get("title"),
-			Category:  query.Get("category"),
-			PriceFrom: priceFrom,
-			PriceTo:   priceTo,
-			City:      query.Get("city"),
-			DateFrom:  dateFrom.Format(time.RFC3339),
-			DateTo:    dateTo.Format(time.RFC3339),
-			User:      createdBy,
-			Offset:    offset,
-			Limit:     limit,
-		}
-
-		events, _ := h.domain.GetEvents(ctx, filter)
+		eventsList, _ := h.eventDomain.GetEvents(ctx, filter)
 
 		resp := map[string]interface{}{
-			"events": events,
-			"count":  len(events),
+			"events": eventsList,
+			"count":  len(eventsList),
 		}
 
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
@@ -183,13 +97,13 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		userID, err := h.domain.GetInternalUserID(ctx, sid)
+		userID, err := h.eventDomain.GetInternalUserID(ctx, sid)
 		if err != nil { // TODO: кастомная ошибка
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusUnauthorized)
 			return
 		}
 
-		events, err := h.domain.GetEventsByUserID(ctx, userID)
+		events, err := h.eventDomain.GetEventsByUserID(ctx, userID)
 		for _, e := range events {
 			if e.Title == event.Title {
 				utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusConflict)
@@ -198,8 +112,8 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		eventID, _ := h.domain.RegisterEvent(ctx, userID, event)
-		_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+		eventID, _ := h.eventDomain.RegisterEvent(ctx, userID, event)
+		_ = h.eventDomain.UpdateUserSession(ctx, sid, h.ttl)
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusCreated)
 		_ = json.NewEncoder(w).Encode(map[string]string{
 			"id": fmt.Sprintf("%v", eventID),
@@ -224,29 +138,29 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 		var event model.Event
 		_ = json.NewDecoder(r.Body).Decode(&event)
 
-		validCategories := map[string]bool{"": true, "meetup": true, "concert": true, "exhibition": true, "party": true, "other": true}
-		if !validCategories[event.Category] {
-			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+		validCategories := map[string]struct{}{"": {}, "meetup": {}, "concert": {}, "exhibition": {}, "party": {}, "other": {}}
+		if _, exists := validCategories[event.Category]; !exists {
+			_ = h.eventDomain.UpdateUserSession(ctx, sid, h.ttl)
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
 			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "category"})
 			return
 		}
 
 		if event.Price < 0 {
-			_ = h.domain.UpdateUserSession(ctx, sid, h.ttl)
+			_ = h.eventDomain.UpdateUserSession(ctx, sid, h.ttl)
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusBadRequest)
 			utils.EncodeErrorResponse(w, &ErrInvalidFieldName{Field: "price"})
 			return
 		}
 
-		existedEvent, err := h.domain.GetEventByID(ctx, id)
+		existedEvent, err := h.eventDomain.GetEventByID(ctx, id)
 		if err != nil {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
 			utils.EncodeErrorResponse(w, ErrEventNotFound)
 			return
 		}
 
-		currentUserID, err := h.domain.GetInternalUserID(ctx, sid)
+		currentUserID, err := h.eventDomain.GetInternalUserID(ctx, sid)
 		if err != nil {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusUnauthorized)
 			return
@@ -258,11 +172,11 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_ = h.domain.UpdateEventsLocationCity(ctx, id, event.Location.City)
+		_ = h.eventDomain.UpdateEventsLocationCity(ctx, id, event.Location.City)
 
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNoContent)
 	case http.MethodGet:
-		event, err := h.domain.GetEventByID(ctx, id)
+		event, err := h.eventDomain.GetEventByID(ctx, id)
 		if err != nil { // TODO: custom error
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
 			utils.EncodeErrorResponse(w, ErrEventNotExist)

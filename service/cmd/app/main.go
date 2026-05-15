@@ -11,6 +11,7 @@ import (
 	"samarina/ndbx/internal/domains/events"
 	"samarina/ndbx/internal/domains/session"
 	"samarina/ndbx/internal/domains/users"
+	"samarina/ndbx/internal/domains/validator"
 	login2 "samarina/ndbx/internal/handlers/auth/login"
 	logout2 "samarina/ndbx/internal/handlers/auth/logout"
 	events2 "samarina/ndbx/internal/handlers/events"
@@ -130,6 +131,7 @@ func main() {
 
 	usersDomain := users.NewDomain(redisStorage, mongodbUsersStorage, mongodbEventsStorage)
 	eventsDomain := events.NewDomain(redisStorage, mongodbEventsStorage)
+	validatorDomain := validator.NewDomain()
 
 	loginDomain := login.NewDomain(redisStorage, mongodbUsersStorage)
 	logoutDomain := logout.NewDomain(redisStorage)
@@ -137,11 +139,11 @@ func main() {
 	// handlers
 	http.Handle("/health", health.New(ttl))
 	http.Handle("/session", session2.New(sessionDomain, ttl))
-	http.HandleFunc("/users", users2.New(usersDomain, ttl).RegisterOrGetUsers)
-	http.HandleFunc("/users/{id}", users2.New(usersDomain, ttl).GetUserByID)
-	http.HandleFunc("/users/{id}/events", users2.New(usersDomain, ttl).GetUserEventsByUserID)
-	http.HandleFunc("/events", events2.New(eventsDomain, ttl).RegisterOrGetEvents)
-	http.HandleFunc("/events/{id}", events2.New(eventsDomain, ttl).GetOrEditEventData)
+	http.HandleFunc("/users", users2.New(usersDomain, validatorDomain, ttl).RegisterOrGetUsers)
+	http.HandleFunc("/users/{id}", users2.New(usersDomain, validatorDomain, ttl).GetUserByID)
+	http.HandleFunc("/users/{id}/events", users2.New(usersDomain, validatorDomain, ttl).GetUserEventsByUserID)
+	http.HandleFunc("/events", events2.New(eventsDomain, validatorDomain, ttl).RegisterOrGetEvents)
+	http.HandleFunc("/events/{id}", events2.New(eventsDomain, validatorDomain, ttl).GetOrEditEventData)
 	http.Handle("/auth/login", login2.New(loginDomain, ttl))
 	http.Handle("/auth/logout", logout2.New(logoutDomain, ttl))
 
