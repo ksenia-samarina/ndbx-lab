@@ -3,7 +3,7 @@ package session
 import (
 	"log"
 	"net/http"
-	"samarina/ndbx/internal/domains/types"
+	"samarina/ndbx/internal/model"
 	"time"
 )
 
@@ -25,13 +25,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	cookie, err := r.Cookie("X-Session-Id")
 	if err == nil {
-		sid := types.NewSid(cookie.Value)
+		sid := model.NewSid(cookie.Value)
 		exists, _ := h.domain.GetSession(ctx, sid)
 		if exists {
 			err := h.domain.UpdateSession(ctx, sid, h.ttl)
 			if err != nil {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				log.Printf("Error update session: %v", err)
+				log.Printf("Error update auth: %v", err)
 				return
 			}
 			h.writeSessionResponse(w, cookie.Value, h.ttl, http.StatusOK)
@@ -41,7 +41,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	newSession, err := h.domain.CreateSession(ctx, h.ttl)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Error create session: %v", err)
+		log.Printf("Error create auth: %v", err)
 		return
 	}
 	h.writeSessionResponse(w, newSession.HexString, h.ttl, http.StatusCreated)

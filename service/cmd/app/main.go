@@ -11,13 +11,15 @@ import (
 	"samarina/ndbx/internal/domains/events"
 	"samarina/ndbx/internal/domains/session"
 	"samarina/ndbx/internal/domains/users"
+	"samarina/ndbx/internal/domains/validator"
 	login2 "samarina/ndbx/internal/handlers/auth/login"
 	logout2 "samarina/ndbx/internal/handlers/auth/logout"
 	events2 "samarina/ndbx/internal/handlers/events"
 	"samarina/ndbx/internal/handlers/health"
 	session2 "samarina/ndbx/internal/handlers/session"
 	users2 "samarina/ndbx/internal/handlers/users"
-	mongodb "samarina/ndbx/internal/repository/mongo"
+	storageevents "samarina/ndbx/internal/repository/mongo/events"
+	storageusers "samarina/ndbx/internal/repository/mongo/users"
 	"samarina/ndbx/internal/repository/redis"
 	"strconv"
 	"time"
@@ -93,8 +95,8 @@ func main() {
 	redisStorage := redis.NewStorage(redisClient)
 	sessionDomain := session.NewDomain(redisStorage)
 
-	mongodbUsersStorage := mongodb.NewStorage(db, "users")
-	mongodbEventsStorage := mongodb.NewStorage(db, "events")
+	mongodbUsersStorage := storageusers.NewStorage(db, "users")
+	mongodbEventsStorage := storageevents.NewStorage(db, "events")
 
 	// indexes
 	userIndexes := []mongo.IndexModel{
@@ -110,8 +112,7 @@ func main() {
 
 	eventIndexes := []mongo.IndexModel{
 		{
-			Keys:    bson.D{{Key: "title", Value: 1}},
-			Options: options.Index().SetUnique(true),
+			Keys: bson.D{{Key: "title", Value: 1}},
 		},
 		{
 			Keys: bson.D{
@@ -128,8 +129,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	usersDomain := users.NewDomain(redisStorage, mongodbUsersStorage)
+	usersDomain := users.NewDomain(redisStorage, mongodbUsersStorage, mongodbEventsStorage)
 	eventsDomain := events.NewDomain(redisStorage, mongodbEventsStorage)
+	validatorDomain := validator.NewDomain()
 
 	loginDomain := login.NewDomain(redisStorage, mongodbUsersStorage)
 	logoutDomain := logout.NewDomain(redisStorage)
@@ -137,8 +139,11 @@ func main() {
 	// handlers
 	http.Handle("/health", health.New(ttl))
 	http.Handle("/session", session2.New(sessionDomain, ttl))
-	http.Handle("/users", users2.New(usersDomain, ttl))
-	http.Handle("/events", events2.New(eventsDomain, ttl))
+	http.HandleFunc("/users", users2.New(usersDomain, validatorDomain, ttl).RegisterOrGetUsers)
+	http.HandleFunc("/users/{id}", users2.New(usersDomain, validatorDomain, ttl).GetUserByID)
+	http.HandleFunc("/users/{id}/events", users2.New(usersDomain, validatorDomain, ttl).GetUserEventsByUserID)
+	http.HandleFunc("/events", events2.New(eventsDomain, validatorDomain, ttl).RegisterOrGetEvents)
+	http.HandleFunc("/events/{id}", events2.New(eventsDomain, validatorDomain, ttl).GetOrEditEventData)
 	http.Handle("/auth/login", login2.New(loginDomain, ttl))
 	http.Handle("/auth/logout", logout2.New(logoutDomain, ttl))
 

@@ -2,9 +2,9 @@ package login
 
 import (
 	"context"
-	"samarina/ndbx/internal/domains/types"
+	"samarina/ndbx/internal/model"
 )
 
-func (d *Domain) GetSession(ctx context.Context, sid *types.Sid) (bool, error) {
+func (d *Domain) GetSession(ctx context.Context, sid model.Sid) (bool, error) {
 	return d.sessionStorage.GetSession(ctx, sid)
 }

@@ -2,18 +2,20 @@ package events
 
 import (
 	"context"
-	"samarina/ndbx/internal/domains/types"
+	"samarina/ndbx/internal/model"
 	"time"
 )
 
 type sessionStorage interface {
-	GetInternalUserID(ctx context.Context, sid *types.Sid) (string, error)
-	GetSession(ctx context.Context, sid *types.Sid) (bool, error)
-	UpdateSession(ctx context.Context, sid *types.Sid, ttl time.Duration) error
+	UpdateSession(ctx context.Context, sid model.Sid, ttl time.Duration) error
+	GetInternalUserID(ctx context.Context, sid model.Sid) (string, error)
 }
 
 type eventsStorage interface {
-	GetEvent(ctx context.Context, createdBy string) (*types.Event, error)
-	CreateEvent(ctx context.Context, createdBy string, event *types.Event) (string, error)
-	ListEvents(ctx context.Context, title string, offset int64, limit int64) ([]types.Event, error)
+	GetEventByID(ctx context.Context, id string) (model.Event, error)
+	GetEventsByUserID(ctx context.Context, createdBy string) ([]model.Event, error)
+	GetEvents(ctx context.Context, filters model.EventFilter) ([]model.Event, error)
+	RegisterEvent(ctx context.Context, createdBy string, event model.Event) (string, error)
+	UpdateEventsLocationCity(ctx context.Context, id string, city string) error
+	GetUserByUsername(ctx context.Context, username string) (model.User, error)
 }

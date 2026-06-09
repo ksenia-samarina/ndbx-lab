@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"samarina/ndbx/internal/domains/types"
+	"samarina/ndbx/internal/model"
 	"samarina/ndbx/internal/utils"
 	"time"
 )
@@ -33,9 +33,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		cookieValue = ""
 	}
-	sid := types.NewSid(cookieValue)
+	sid := model.NewSid(cookieValue)
 
-	var login types.Login
+	var login model.Login
 	err = json.NewDecoder(r.Body).Decode(&login)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -63,7 +63,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// 401
 	user, err := h.domain.GetByUsername(ctx, login.Username)
-	if user == nil {
+	if err != nil {
 		h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusUnauthorized)
 		loginResp := &Resp{
 			Message: userInvalidCredentials,
@@ -91,7 +91,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := h.domain.UpdateUserSession(ctx, userID, sid, h.ttl)
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Error update session: %v", err)
+			log.Printf("Error update auth: %v", err)
 			return
 		}
 		h.writeSessionResponse(w, cookieValue, h.ttl, http.StatusNoContent)
@@ -100,7 +100,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	_, err = h.domain.CreateUserSession(ctx, userID, h.ttl)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Error create session: %v", err)
+		log.Printf("Error create auth: %v", err)
 		return
 	}
 	h.writeSessionResponse(w, cookieValue, h.ttl, http.StatusNoContent)

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"samarina/ndbx/internal/domains/types"
+	"samarina/ndbx/internal/model"
 	"time"
 )
 
@@ -35,12 +35,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Invalid cookie: %v", err)
 		return
 	}
-	sid := types.NewSid(cookie.Value)
+	sid := model.NewSid(cookie.Value)
 
+	exists, _ := h.domain.GetSession(ctx, sid)
+	if !exists {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 	err = h.domain.DeleteSession(ctx, sid)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Error delete session: %v", err)
+		log.Printf("Error delete auth: %v", err)
 		return
 	}
 	h.writeSessionResponse(w, cookie.Value, 0, http.StatusNoContent)

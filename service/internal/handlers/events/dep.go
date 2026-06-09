@@ -2,15 +2,24 @@ package events
 
 import (
 	"context"
-	"samarina/ndbx/internal/domains/types"
+	"net/url"
+	"samarina/ndbx/internal/model"
 	"time"
 )
 
-type domain interface {
-	GetSession(ctx context.Context, sid *types.Sid) (bool, error)
-	GetInternalUserID(ctx context.Context, sid *types.Sid) (string, error)
-	GetEvent(ctx context.Context, createdBy string) (*types.Event, error)
-	CreateEvent(ctx context.Context, createdBy string, event *types.Event) (string, error)
-	ListEvents(ctx context.Context, title string, offset int64, limit int64) ([]types.Event, error)
-	UpdateUserSession(ctx context.Context, sid *types.Sid, ttl time.Duration) error
+type eventDomain interface {
+	UpdateUserSession(ctx context.Context, sid model.Sid, ttl time.Duration) error
+	GetInternalUserID(ctx context.Context, sid model.Sid) (string, error)
+
+	GetEventsByUserID(ctx context.Context, id string) ([]model.Event, error)
+	RegisterEvent(ctx context.Context, createdBy string, event model.Event) (string, error)
+	UpdateEventsLocationCity(ctx context.Context, id string, city string) error
+	GetEventByID(ctx context.Context, createdBy string) (model.Event, error)
+	GetEvents(ctx context.Context, filters model.EventFilter) ([]model.Event, error)
+
+	GetUserByUsername(ctx context.Context, username string) (model.User, error)
+}
+
+type validatorDomain interface {
+	ValidateParams(query url.Values) (model.EventFilter, error)
 }

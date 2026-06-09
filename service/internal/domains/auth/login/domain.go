@@ -1,11 +1,11 @@
 package login
 
 type Domain struct {
-	sessionStorage sessionStorage
+	sessionStorage authStorage
 	loginStorage   loginStorage
 }
 
-func NewDomain(sessionStorage sessionStorage, loginStorage loginStorage) *Domain {
+func NewDomain(sessionStorage authStorage, loginStorage loginStorage) *Domain {
 	return &Domain{
 		sessionStorage: sessionStorage,
 		loginStorage:   loginStorage,
