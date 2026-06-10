@@ -58,7 +58,11 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 		var createdBy = ""
 		username := query.Get("user")
 		if username != "" {
+			log.Printf("USERNAME: %s", username)
 			user, err := h.eventDomain.GetUserByUsername(ctx, username)
+			log.Printf("USER: %v", user)
+			log.Printf("USER hex: %s", user.ID.Hex())
+			log.Printf("ERROR: %v", err)
 			if err == nil {
 				createdBy = user.ID.Hex()
 			}

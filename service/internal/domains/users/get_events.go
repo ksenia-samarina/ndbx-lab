@@ -6,6 +6,5 @@ import (
 )
 
 func (d *Domain) GetEvents(ctx context.Context, filter model.EventFilter) ([]model.Event, error) {
-	events, err := d.eventStorage.GetEvents(ctx, filter)
-	return events, err
+	return d.eventStorage.GetEvents(ctx, filter)
 }

@@ -11,7 +11,7 @@ func (s *Storage) GetUserByUsername(ctx context.Context, username string) (model
 	var user model.User
 
 	filter := bson.M{"username": username}
-	err := s.collection.FindOne(ctx, filter).Decode(&user)
+	err := s.usersCollection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		return model.User{}, err
 	}

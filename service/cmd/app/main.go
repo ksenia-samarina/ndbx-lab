@@ -145,7 +145,7 @@ func main() {
 	sessionDomain := session.NewDomain(redisStorage)
 
 	mongodbUsersStorage := storageusers.NewStorage(db, "users")
-	mongodbEventsStorage := storageevents.NewStorage(db, "events")
+	mongodbEventsStorage := storageevents.NewStorage(db, "events", "users")
 
 	cassandraStorage := storagecassandra.NewCassandraStorage(gocqlSession, cassandraKeyspace, "event_reactions")
 

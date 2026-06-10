@@ -12,7 +12,7 @@ func (s *Storage) GetEventsByUserID(ctx context.Context, createdBy string) ([]mo
 	objID, _ := primitive.ObjectIDFromHex(createdBy)
 	filter := bson.M{"created_by": objID}
 
-	cursor, err := s.collection.Find(ctx, filter)
+	cursor, err := s.eventsCollection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
