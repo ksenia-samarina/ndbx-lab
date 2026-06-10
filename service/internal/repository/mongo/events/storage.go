@@ -7,18 +7,20 @@ import (
 )
 
 type Storage struct {
-	db         *mongo.Database
-	collection *mongo.Collection
+	db               *mongo.Database
+	eventsCollection *mongo.Collection
+	usersCollection  *mongo.Collection
 }
 
 func (s *Storage) CreateIndexes(ctx context.Context, models []mongo.IndexModel) error {
-	_, err := s.collection.Indexes().CreateMany(ctx, models)
+	_, err := s.eventsCollection.Indexes().CreateMany(ctx, models)
 	return err
 }
 
-func NewStorage(db *mongo.Database, collectionName string) *Storage {
+func NewStorage(db *mongo.Database, eventsCollectionName string, usersCollectionName string) *Storage {
 	return &Storage{
-		db:         db,
-		collection: db.Collection(collectionName),
+		db:               db,
+		eventsCollection: db.Collection(eventsCollectionName),
+		usersCollection:  db.Collection(usersCollectionName),
 	}
 }

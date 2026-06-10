@@ -14,7 +14,7 @@ func (s *Storage) GetEventByID(ctx context.Context, id string) (model.Event, err
 	objID, _ := primitive.ObjectIDFromHex(id)
 
 	var event model.Event
-	err := s.collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&event)
+	err := s.eventsCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&event)
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		return model.Event{}, ErrEventNotExist
 	}
