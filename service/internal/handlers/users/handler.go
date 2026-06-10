@@ -15,13 +15,15 @@ import (
 type Handler struct {
 	userDomain      userDomain
 	validatorDomain validatorDomain
+	reactionsDomain reactionsDomain
 	ttl             time.Duration
 }
 
-func New(userDomain userDomain, validatorDomain validatorDomain, ttl time.Duration) *Handler {
+func New(userDomain userDomain, validatorDomain validatorDomain, reactionsDomain reactionsDomain, ttl time.Duration) *Handler {
 	return &Handler{
 		userDomain:      userDomain,
 		validatorDomain: validatorDomain,
+		reactionsDomain: reactionsDomain,
 		ttl:             ttl,
 	}
 }
@@ -154,7 +156,7 @@ func (h *Handler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 
 	id := r.PathValue("id")
 	user, err := h.userDomain.GetUserByUserID(ctx, id)
-	if err != nil { // TODO: кастомная ошибка что нет пользака
+	if err != nil {
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
 		err = utils.EncodeErrorResponse(w, ErrUserNotFound)
 		if err != nil {
@@ -166,8 +168,7 @@ func (h *Handler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(user)
 	err = h.userDomain.UpdateUserSession(ctx, sid, h.ttl)
 	if err != nil {
-		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
-		return
+		log.Printf("Failed to update user session: %v", err)
 	}
 }
 
@@ -183,7 +184,7 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 
 	id := r.PathValue("id")
 	_, err := h.userDomain.GetUserByUserID(ctx, id)
-	if err != nil { // TODO: кастомная ошибка что нет пользака
+	if err != nil {
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
 		err = utils.EncodeErrorResponse(w, ErrUserNotFound)
 		if err != nil {
@@ -193,6 +194,8 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 	}
 
 	query := r.URL.Query()
+	includeReactions := query.Get("include") == "reactions"
+	query.Del("include")
 
 	var target *validator.ErrInvalidFieldName
 	filter, err := h.validatorDomain.ValidateParams(query)
@@ -202,6 +205,7 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			log.Printf("Encode error wasn't sent to client: %v", err)
 		}
+		return
 	}
 	filter.User = id
 
@@ -211,9 +215,16 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	enrichedEvents, err := h.reactionsDomain.EnrichEventsWithReactions(ctx, events, includeReactions)
+	if err != nil {
+		log.Printf("Failed to enrich user events: %v", err)
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+		return
+	}
+
 	resp := map[string]interface{}{
-		"events": events,
-		"count":  len(events),
+		"events": enrichedEvents,
+		"count":  len(enrichedEvents),
 	}
 	utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
 	_ = json.NewEncoder(w).Encode(&resp)

@@ -13,6 +13,8 @@ services:
         condition: service_healthy
       redis_db:
         condition: service_started
+      cassandra:
+        condition: service_healthy
     restart: unless-stopped
 
   redis_db:
@@ -20,6 +22,22 @@ services:
     container_name: ${REDIS_HOST}
     ports:
       - "${REDIS_PORT}:${REDIS_PORT}"
+    restart: unless-stopped
+
+  cassandra:
+    image: cassandra:5.0
+    container_name: ${CASSANDRA_HOSTS}
+    ports:
+      - "${CASSANDRA_PORT}:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=NDBX_Cluster
+      - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep -E '^UN\\s' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   cfg-1:
@@ -46,7 +64,6 @@ services:
     image: mongo:7.0
     container_name: shard-1-b
     command: mongod --shardsvr --replSet shard-1-rs --port ${MONGODB_PORT} --bind_ip_all
-
 
   shard-1-c:
     image: mongo:7.0
