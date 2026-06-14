@@ -74,6 +74,5 @@ func (s *Storage) GetEvents(ctx context.Context, filters model.EventFilter) ([]m
 	if err := cursor.All(ctx, &events); err != nil {
 		return nil, err
 	}
-
 	return events, nil
 }

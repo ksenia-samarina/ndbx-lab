@@ -40,6 +40,14 @@ func (s *Storage) InitSchema(ctx context.Context, keyspace string) error {
 		return fmt.Errorf("failed to create table %s: %w", s.tableName, err)
 	}
 
+	createIndexQuery := fmt.Sprintf(`
+		CREATE INDEX IF NOT EXISTS ON %s.%s (like_value);`,
+		keyspace, s.tableName,
+	)
+	if err := s.session.Query(createIndexQuery).ExecContext(ctx); err != nil {
+		return fmt.Errorf("failed to create secondary index on like_value: %w", err)
+	}
+
 	return nil
 }
 

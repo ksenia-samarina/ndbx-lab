@@ -14,9 +14,9 @@ type reactionsStorage interface {
 type reactionsCache interface {
 	GetCounters(ctx context.Context, eventTitle string) (*model.ReactionCounters, error)
 	SetCounters(ctx context.Context, eventTitle string, counters *model.ReactionCounters, ttl time.Duration) error
-	IncrementCounter(ctx context.Context, eventTitle string, field string, value int64, ttl time.Duration) error
 }
 
 type eventsStorage interface {
 	GetEventByID(ctx context.Context, id string) (model.Event, error)
+	GetEvents(ctx context.Context, filter model.EventFilter) ([]model.Event, error)
 }
