@@ -73,8 +73,8 @@ func main() {
 	cassandraPortStr := os.Getenv("CASSANDRA_PORT")
 	cassandraUsername := os.Getenv("CASSANDRA_USERNAME")
 	cassandraPassword := os.Getenv("CASSANDRA_PASSWORD")
-	cassandraKeyspace := os.Getenv("CASSANDRA_KEYSPACE")
-	cassandraConsistency := os.Getenv("CASSANDRA_CONSISTENCY")
+	cassandraKeyspace := strings.Trim(os.Getenv("CASSANDRA_KEYSPACE"), "\"")
+	cassandraConsistency := strings.Trim(os.Getenv("CASSANDRA_CONSISTENCY"), "\"")
 
 	redisClient := redisdb.NewClient(&redisdb.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
