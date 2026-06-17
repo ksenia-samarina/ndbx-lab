@@ -2,7 +2,6 @@ package reviews
 
 import (
 	"context"
-	"log"
 	"samarina/ndbx/internal/model"
 )
 
@@ -34,7 +33,5 @@ func (d *Domain) GetReviews(ctx context.Context, eventID string, limit, offset i
 	if end > totalCount || limit == 0 {
 		end = totalCount
 	}
-
-	log.Printf("reviews: %v", allReviews[offset:end])
 	return allReviews[offset:end], totalCount, nil
 }

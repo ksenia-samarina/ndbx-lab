@@ -3,7 +3,6 @@ package reactions
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"samarina/ndbx/internal/domains/reviews"
 	"samarina/ndbx/internal/handlers/utils"
@@ -149,7 +148,6 @@ func (h *Handler) GetReviews(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.WriteSessionResponse(w, sidStr, h.ttl, http.StatusOK)
-	log.Printf("count %v", count)
 	_ = json.NewEncoder(w).Encode(GetReviewsResponse{
 		Reviews: reviewsList,
 		Count:   count,
