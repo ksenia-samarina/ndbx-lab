@@ -6,7 +6,7 @@ import (
 )
 
 func (s *Storage) DeleteCounters(ctx context.Context, eventTitle string) error {
-	key := s.buildKey(eventTitle)
+	key := s.buildReactionsKey(eventTitle)
 
 	err := s.client.Del(ctx, key).Err()
 	if err != nil {

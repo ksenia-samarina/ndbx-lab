@@ -10,6 +10,7 @@ import (
 	"samarina/ndbx/internal/domains/auth/logout"
 	"samarina/ndbx/internal/domains/events"
 	"samarina/ndbx/internal/domains/reactions"
+	"samarina/ndbx/internal/domains/reviews"
 	"samarina/ndbx/internal/domains/session"
 	"samarina/ndbx/internal/domains/users"
 	"samarina/ndbx/internal/domains/validator"
@@ -18,9 +19,10 @@ import (
 	events2 "samarina/ndbx/internal/handlers/events"
 	"samarina/ndbx/internal/handlers/health"
 	reactions2 "samarina/ndbx/internal/handlers/reactions"
+	reviews2 "samarina/ndbx/internal/handlers/reviews"
 	session2 "samarina/ndbx/internal/handlers/session"
 	users2 "samarina/ndbx/internal/handlers/users"
-	storagecassandra "samarina/ndbx/internal/repository/cassandra/reactions"
+	storagecassandra "samarina/ndbx/internal/repository/cassandra"
 	storageevents "samarina/ndbx/internal/repository/mongo/events"
 	storageusers "samarina/ndbx/internal/repository/mongo/users"
 	"samarina/ndbx/internal/repository/redis"
@@ -75,6 +77,12 @@ func main() {
 	cassandraPassword := os.Getenv("CASSANDRA_PASSWORD")
 	cassandraKeyspace := os.Getenv("CASSANDRA_KEYSPACE")
 	cassandraConsistency := os.Getenv("CASSANDRA_CONSISTENCY")
+
+	reviewTTLSec, err := strconv.Atoi(os.Getenv("APP_EVENT_REVIEWS_TTL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	reviewTTL := time.Duration(reviewTTLSec) * time.Second
 
 	redisClient := redisdb.NewClient(&redisdb.Options{
 		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
@@ -147,7 +155,7 @@ func main() {
 	mongodbUsersStorage := storageusers.NewStorage(db, "users")
 	mongodbEventsStorage := storageevents.NewStorage(db, "events", "users")
 
-	cassandraStorage := storagecassandra.NewCassandraStorage(gocqlSession, cassandraKeyspace, "event_reactions")
+	cassandraStorage := storagecassandra.NewCassandraStorage(gocqlSession, cassandraKeyspace, "event_reactions", "event_reviews")
 
 	initSchemaCtx, cancelSchema := context.WithTimeout(ctx, 10*time.Second)
 	err = cassandraStorage.InitSchema(initSchemaCtx, cassandraKeyspace)
@@ -192,6 +200,8 @@ func main() {
 
 	reactionsDomain := reactions.NewDomain(cassandraStorage, mongodbEventsStorage, redisStorage, likeTTL)
 
+	reviewsDomain := reviews.NewDomain(mongodbEventsStorage, cassandraStorage, redisStorage, reviewTTL)
+
 	loginDomain := login.NewDomain(redisStorage, mongodbUsersStorage)
 	logoutDomain := logout.NewDomain(redisStorage)
 
@@ -199,9 +209,10 @@ func main() {
 	http.Handle("/health", health.New(ttl))
 	http.Handle("/session", session2.New(sessionDomain, ttl))
 
-	usersHandler := users2.New(usersDomain, validatorDomain, reactionsDomain, ttl)
-	eventsHandler := events2.New(eventsDomain, reactionsDomain, validatorDomain, ttl)
+	usersHandler := users2.New(usersDomain, validatorDomain, reactionsDomain, reviewsDomain, ttl)
+	eventsHandler := events2.New(eventsDomain, reactionsDomain, reviewsDomain, validatorDomain, ttl)
 	reactionsHandler := reactions2.New(eventsDomain, reactionsDomain, ttl)
+	reviewsHandler := reviews2.New(eventsDomain, reviewsDomain, ttl)
 
 	http.HandleFunc("/users", usersHandler.RegisterOrGetUsers)
 	http.HandleFunc("/users/{id}", usersHandler.GetUserByID)
@@ -215,6 +226,10 @@ func main() {
 
 	http.HandleFunc("/events/{event_id}/like", reactionsHandler.SetLike)
 	http.HandleFunc("/events/{event_id}/dislike", reactionsHandler.SetDislike)
+
+	http.HandleFunc("POST /events/{event_id}/reviews", reviewsHandler.PostReview)
+	http.HandleFunc("GET /events/{event_id}/reviews", reviewsHandler.GetReviews)
+	http.HandleFunc("PATCH /events/{event_id}/reviews/{review_id}", reviewsHandler.PatchReview)
 
 	log.Printf("Listening http at addr: %s:%s", appHost, appPort)
 	err = http.ListenAndServe(fmt.Sprintf("%s:%s", appHost, appPort), nil)

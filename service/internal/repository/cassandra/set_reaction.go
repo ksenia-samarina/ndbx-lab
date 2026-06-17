@@ -1,4 +1,4 @@
-package reactions
+package cassandra
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 
 func (s *Storage) SetReaction(ctx context.Context, reaction model.Reaction) error {
 	query := `
-		INSERT INTO ` + s.keyspace + `.` + s.tableName + ` (event_id, created_by, like_value, created_at)
+		INSERT INTO ` + s.keyspace + `.` + s.likeTableName + ` (event_id, created_by, like_value, created_at)
 		VALUES (?, ?, ?, ?)
 	`
 

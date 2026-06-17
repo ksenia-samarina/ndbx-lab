@@ -9,7 +9,7 @@ import (
 )
 
 func (s *Storage) GetCounters(ctx context.Context, eventTitle string) (*model.ReactionCounters, error) {
-	key := s.buildKey(eventTitle)
+	key := s.buildReactionsKey(eventTitle)
 
 	res, err := s.client.HGetAll(ctx, key).Result()
 	if err != nil {

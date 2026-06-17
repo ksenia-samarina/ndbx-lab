@@ -9,6 +9,7 @@ import (
 	"samarina/ndbx/internal/handlers/utils"
 	"samarina/ndbx/internal/model"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -16,14 +17,16 @@ type Handler struct {
 	userDomain      userDomain
 	validatorDomain validatorDomain
 	reactionsDomain reactionsDomain
+	reviewsDomain   reviewsDomain
 	ttl             time.Duration
 }
 
-func New(userDomain userDomain, validatorDomain validatorDomain, reactionsDomain reactionsDomain, ttl time.Duration) *Handler {
+func New(userDomain userDomain, validatorDomain validatorDomain, reactionsDomain reactionsDomain, reviewsDomain reviewsDomain, ttl time.Duration) *Handler {
 	return &Handler{
 		userDomain:      userDomain,
 		validatorDomain: validatorDomain,
 		reactionsDomain: reactionsDomain,
+		reviewsDomain:   reviewsDomain,
 		ttl:             ttl,
 	}
 }
@@ -194,8 +197,9 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 	}
 
 	query := r.URL.Query()
-	includeReactions := query.Get("include") == "reactions"
-	query.Del("include")
+	includeParam := query.Get("include")
+	includeReactions := strings.Contains(includeParam, "reactions")
+	includeReviews := strings.Contains(includeParam, "reviews")
 
 	var target *validator.ErrInvalidFieldName
 	filter, err := h.validatorDomain.ValidateParams(query)
@@ -216,6 +220,13 @@ func (h *Handler) GetUserEventsByUserID(w http.ResponseWriter, r *http.Request) 
 	}
 
 	enrichedEvents, err := h.reactionsDomain.EnrichEventsWithReactions(ctx, events, includeReactions)
+	if err != nil {
+		log.Printf("Failed to enrich user events: %v", err)
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+		return
+	}
+
+	enrichedEvents, err = h.reviewsDomain.EnrichEventsWithReviews(ctx, events, includeReviews)
 	if err != nil {
 		log.Printf("Failed to enrich user events: %v", err)
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)

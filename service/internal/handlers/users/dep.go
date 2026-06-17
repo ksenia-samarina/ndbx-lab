@@ -24,3 +24,7 @@ type validatorDomain interface {
 type reactionsDomain interface {
 	EnrichEventsWithReactions(ctx context.Context, events []model.Event, includeReactions bool) ([]model.Event, error)
 }
+
+type reviewsDomain interface {
+	EnrichEventsWithReviews(ctx context.Context, events []model.Event, includeReviews bool) ([]model.Event, error)
+}

@@ -1,4 +1,4 @@
-package reactions
+package cassandra
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 )
 
 func (s *Storage) GetReactionCounters(ctx context.Context, eventID string) (*model.ReactionCounters, error) {
-	query := `SELECT like_value FROM ` + s.keyspace + `.` + s.tableName + ` WHERE event_id = ?`
+	query := `SELECT like_value FROM ` + s.keyspace + `.` + s.likeTableName + ` WHERE event_id = ?`
 
 	scanner := s.session.Query(query, eventID).IterContext(ctx).Scanner()
 

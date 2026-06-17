@@ -40,6 +40,11 @@ type ReactionCounters struct {
 	Dislikes int64 `json:"dislikes"`
 }
 
+type ReviewsSummary struct {
+	Count  int     `json:"count"`
+	Rating float64 `json:"rating"`
+}
+
 type Event struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Title       string             `bson:"title" json:"title"`
@@ -56,6 +61,7 @@ type Event struct {
 	Category   string            `bson:"category" json:"category"`
 	Price      uint              `bson:"price" json:"price"`
 	Reactions  *ReactionCounters `bson:"-" json:"reactions,omitempty"`
+	Reviews    *ReviewsSummary   `bson:"-" json:"reviews"`
 }
 
 type EventFilter struct {
@@ -82,4 +88,14 @@ type Reaction struct {
 	CreatedBy string
 	LikeValue int8
 	CreatedAt time.Time
+}
+
+type Review struct {
+	ID        string    `json:"id"`
+	EventID   string    `json:"event_id"`
+	Comment   string    `json:"comment"`
+	CreatedAt time.Time `json:"created_at"`
+	CreatedBy string    `json:"created_by"`
+	Rating    int       `json:"rating"`
+	UpdatedAt time.Time `json:"updated_at"`
 }

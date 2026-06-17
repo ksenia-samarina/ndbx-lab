@@ -8,7 +8,7 @@ import (
 )
 
 func (s *Storage) SetCounters(ctx context.Context, eventTitle string, counters *model.ReactionCounters, ttl time.Duration) error {
-	key := s.buildKey(eventTitle)
+	key := s.buildReactionsKey(eventTitle)
 	s.client.Del(ctx, key)
 	err := s.client.HSet(ctx, key,
 		"likes", counters.Likes,
