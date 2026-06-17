@@ -11,9 +11,9 @@ import (
 
 func (s *Storage) UpdateReview(ctx context.Context, r model.Review) error {
 	query := fmt.Sprintf(`
-		UPDATE %s.event_reviews 
+		UPDATE %s.%s 
 		SET comment = ?, rating = ?, updated_at = ?
-		WHERE event_id = ? AND id = ?`, s.keyspace,
+		WHERE event_id = ? AND id = ?`, s.keyspace, s.reviewTableName,
 	)
 
 	reviewUUID, err := gocql.ParseUUID(r.ID)
