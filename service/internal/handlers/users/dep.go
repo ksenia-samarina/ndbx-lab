@@ -20,3 +20,11 @@ type userDomain interface {
 type validatorDomain interface {
 	ValidateParams(query url.Values) (model.EventFilter, error)
 }
+
+type reactionsDomain interface {
+	EnrichEventsWithReactions(ctx context.Context, events []model.Event, includeReactions bool) ([]model.Event, error)
+}
+
+type reviewsDomain interface {
+	EnrichEventsWithReviews(ctx context.Context, events []model.Event, includeReviews bool) ([]model.Event, error)
+}

@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,18 +10,27 @@ import (
 	"samarina/ndbx/internal/domains/validator"
 	"samarina/ndbx/internal/handlers/utils"
 	"samarina/ndbx/internal/model"
+	"strings"
 	"time"
 )
 
+type reviewsDomain interface {
+	EnrichEventsWithReviews(ctx context.Context, events []model.Event, includeReviews bool) ([]model.Event, error)
+}
+
 type Handler struct {
 	eventDomain     eventDomain
+	reactionsDomain reactionsDomain
+	reviewsDomain   reviewsDomain
 	validatorDomain validatorDomain
 	ttl             time.Duration
 }
 
-func New(eventDomain eventDomain, validatorDomain validatorDomain, ttl time.Duration) *Handler {
+func New(eventDomain eventDomain, reactionsDomain reactionsDomain, reviewsDomain reviewsDomain, validatorDomain validatorDomain, ttl time.Duration) *Handler {
 	return &Handler{
 		eventDomain:     eventDomain,
+		reactionsDomain: reactionsDomain,
+		reviewsDomain:   reviewsDomain,
 		validatorDomain: validatorDomain,
 		ttl:             ttl,
 	}
@@ -40,6 +50,11 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		query := r.URL.Query()
 
+		includeParam := query.Get("include")
+		includeReactions := strings.Contains(includeParam, "reactions")
+		includeReviews := strings.Contains(includeParam, "reviews")
+		query.Del("include")
+
 		var target *validator.ErrInvalidFieldName
 		filter, err := h.validatorDomain.ValidateParams(query)
 		if errors.As(err, &target) {
@@ -48,6 +63,7 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				log.Printf("Encode error wasn't sent to client: %v", err)
 			}
+			return
 		}
 
 		var createdBy = ""
@@ -62,9 +78,23 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 
 		eventsList, _ := h.eventDomain.GetEvents(ctx, filter)
 
+		enrichedEvents, err := h.reactionsDomain.EnrichEventsWithReactions(ctx, eventsList, includeReactions)
+		if err != nil {
+			log.Printf("Failed to enrich events with reactions: %v", err)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+			return
+		}
+
+		enrichedEvents, err = h.reviewsDomain.EnrichEventsWithReviews(ctx, enrichedEvents, includeReviews)
+		if err != nil {
+			log.Printf("Failed to enrich events with reviews: %v", err)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+			return
+		}
+
 		resp := map[string]interface{}{
-			"events": eventsList,
-			"count":  len(eventsList),
+			"events": enrichedEvents,
+			"count":  len(enrichedEvents),
 		}
 
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
@@ -114,7 +144,7 @@ func (h *Handler) RegisterOrGetEvents(w http.ResponseWriter, r *http.Request) {
 		}
 
 		userID, err := h.eventDomain.GetInternalUserID(ctx, sid)
-		if err != nil { // TODO: кастомная ошибка
+		if err != nil {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusUnauthorized)
 			return
 		}
@@ -226,20 +256,41 @@ func (h *Handler) GetOrEditEventData(w http.ResponseWriter, r *http.Request) {
 
 		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNoContent)
 	case http.MethodGet:
+		includeParam := r.URL.Query().Get("include")
+		includeReactions := strings.Contains(includeParam, "reactions")
+		includeReviews := strings.Contains(includeParam, "reviews")
+
 		event, err := h.eventDomain.GetEventByID(ctx, id)
-		if err != nil { // TODO: custom error
+		if err != nil {
 			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
-			err = utils.EncodeErrorResponse(w, ErrEventNotExist)
+			err = utils.EncodeErrorResponse(w, ErrEventNotFound)
 			if err != nil {
 				log.Printf("Encode error wasn't sent to client: %v", err)
 			}
 			return
 		}
 
-		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
-		err = json.NewEncoder(w).Encode(event)
+		enrichedEvents, err := h.reactionsDomain.EnrichEventsWithReactions(ctx, []model.Event{event}, includeReactions)
 		if err != nil {
-			log.Printf("Encode error wasn't sent to client: %v", err)
+			log.Printf("Failed to enrich single event with reactions: %v", err)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+			return
 		}
+
+		enrichedEvents, err = h.reviewsDomain.EnrichEventsWithReviews(ctx, enrichedEvents, includeReviews)
+		if err != nil {
+			log.Printf("Failed to enrich single event with reviews: %v", err)
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusInternalServerError)
+			return
+		}
+
+		if len(enrichedEvents) == 0 {
+			utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusNotFound)
+			_ = utils.EncodeErrorResponse(w, ErrEventNotFound)
+			return
+		}
+
+		utils.WriteSessionResponse(w, sid.HexString, h.ttl, http.StatusOK)
+		_ = json.NewEncoder(w).Encode(enrichedEvents[0])
 	}
 }

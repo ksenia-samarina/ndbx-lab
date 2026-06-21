@@ -9,5 +9,5 @@ func (d *Domain) GetInternalUserID(ctx context.Context, username string) (string
 	if err != nil {
 		return "", err
 	}
-	return objectID.String(), nil
+	return objectID.Hex(), nil
 }
