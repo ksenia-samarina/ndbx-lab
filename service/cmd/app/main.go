@@ -157,13 +157,6 @@ func main() {
 
 	cassandraStorage := storagecassandra.NewCassandraStorage(gocqlSession, cassandraKeyspace, "event_reactions", "event_reviews")
 
-	initSchemaCtx, cancelSchema := context.WithTimeout(ctx, 10*time.Second)
-	err = cassandraStorage.InitSchema(initSchemaCtx, cassandraKeyspace)
-	cancelSchema()
-	if err != nil {
-		log.Fatalf("failed to init cassandra schema: %v", err)
-	}
-
 	userIndexes := []mongo.IndexModel{
 		{
 			Keys:    bson.D{{Key: "username", Value: 1}},
