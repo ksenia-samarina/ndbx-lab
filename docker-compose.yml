@@ -30,7 +30,7 @@ services:
     image: cassandra:5.0
     container_name: ${CASSANDRA_HOSTS}
     ports:
-      - "${CASSANDRA_PORT}:9042"
+      - "${CASSANDRA_PORT}:${CASSANDRA_PORT}"
     environment:
       - CASSANDRA_CLUSTER_NAME=NDBX_Cluster
       - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
