@@ -35,11 +35,11 @@ services:
       - CASSANDRA_CLUSTER_NAME=NDBX_Cluster
       - CASSANDRA_ENDPOINT_SNITCH=SimpleSnitch
     healthcheck:
-      test: ["CMD-SHELL", "nodetool status | grep -E '^UN\\s' || exit 1"]
+      test: ["CMD-SHELL", "cqlsh -e 'SHOW VERSION;' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 45s
     restart: unless-stopped
 
   cassandra-init:
