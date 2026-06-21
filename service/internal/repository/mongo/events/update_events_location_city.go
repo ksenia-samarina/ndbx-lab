@@ -15,7 +15,7 @@ func (s *Storage) UpdateEventsLocationCity(ctx context.Context, id string, city 
 	update := bson.M{
 		"$set": bson.M{"location.city": city},
 	}
-	_, err := s.collection.UpdateOne(ctx, filter, update)
+	_, err := s.eventsCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}

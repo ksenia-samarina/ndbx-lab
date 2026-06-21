@@ -17,11 +17,12 @@ func (s *Storage) UpdateUserSession(ctx context.Context, userID string, sid mode
 			ExpirationType: redis.HSetEXExpirationEX,
 			ExpirationVal:  int64(ttl.Seconds()),
 		},
-		"user_ud", userID,
+		"user_id", userID,
 		"updated_at", t,
 	).Err()
 	if err != nil {
 		return fmt.Errorf("create session error: %w", err)
 	}
 	return nil
+
 }

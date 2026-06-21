@@ -43,13 +43,10 @@ func (s *Storage) GetEvents(ctx context.Context, filters model.EventFilter) ([]m
 	}
 
 	dateFrom, _ := time.Parse(time.RFC3339, filters.DateFrom)
-	dateTo, _ := time.Parse(time.RFC3339, filters.DateFrom)
+	dateTo, _ := time.Parse(time.RFC3339, filters.DateTo)
 	if !dateFrom.IsZero() || !dateTo.IsZero() {
 		if !dateFrom.IsZero() {
 			filter["started_at"] = bson.M{"$gte": filters.DateFrom}
-		}
-		if !dateTo.IsZero() {
-			filters.DateTo = filters.DateFrom
 		}
 		if !dateTo.IsZero() {
 			t, _ := time.Parse(time.RFC3339, filters.DateTo)
@@ -67,7 +64,7 @@ func (s *Storage) GetEvents(ctx context.Context, filters model.EventFilter) ([]m
 	if filters.Offset > 0 {
 		findOptions.SetSkip(filters.Offset)
 	}
-	cursor, err := s.collection.Find(ctx, filter, findOptions)
+	cursor, err := s.eventsCollection.Find(ctx, filter, findOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +74,5 @@ func (s *Storage) GetEvents(ctx context.Context, filters model.EventFilter) ([]m
 	if err := cursor.All(ctx, &events); err != nil {
 		return nil, err
 	}
-
 	return events, nil
 }

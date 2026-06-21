@@ -91,19 +91,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err := h.domain.UpdateUserSession(ctx, userID, sid, h.ttl)
 		if err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Error update auth: %v", err)
 			return
 		}
-		h.writeSessionResponse(w, cookieValue, h.ttl, http.StatusNoContent)
+		h.writeSessionResponse(w, sid.HexString, h.ttl, http.StatusNoContent)
 		return
 	}
-	_, err = h.domain.CreateUserSession(ctx, userID, h.ttl)
+
+	newSid, err := h.domain.CreateUserSession(ctx, userID, h.ttl)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Error create auth: %v", err)
 		return
 	}
-	h.writeSessionResponse(w, cookieValue, h.ttl, http.StatusNoContent)
+	h.writeSessionResponse(w, newSid.HexString, h.ttl, http.StatusNoContent)
 	return
 }
 
